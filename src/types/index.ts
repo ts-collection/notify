@@ -6,12 +6,12 @@ export type NotifyType =
   | 'info'
   | 'loading';
 
-export interface NotifyOptions {
-  toast?: { duration: number };
+export type NotifyOptions = {
+  toast?: boolean | { duration: number };
   id?: string;
-}
+};
 
-export interface NotifyEntry {
+export type NotifyEntry = {
   id: string;
   type: NotifyType;
   message: string;
@@ -19,4 +19,4 @@ export interface NotifyEntry {
   duration: number;
   persistent: boolean;
   spinnerIndex: number;
-}
+};

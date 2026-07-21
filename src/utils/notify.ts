@@ -3,7 +3,7 @@ import type { NotifyEntry, NotifyOptions, NotifyType } from '../types';
 import { color } from './colors';
 
 const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-const DEFAULT_DURATION = 3000;
+const DEFAULT_TOAST_DURATION = 3000;
 
 const icon = (t: NotifyEntry) => {
   if (t.type === 'loading')
@@ -14,6 +14,17 @@ const icon = (t: NotifyEntry) => {
   if (t.type === 'info') return color.info('i');
   return color.dim('●');
 };
+
+// Resolve the `toast` option into a { isToast, duration } pair.
+// - falsy (undefined/false) -> not a toast, stays until dismissed/replaced
+// - true                    -> toast with the default duration
+// - { duration }            -> toast with a custom duration
+function resolveToast(toast: NotifyOptions['toast']) {
+  if (!toast) return { isToast: false, duration: Number.POSITIVE_INFINITY };
+  if (toast === true)
+    return { isToast: true, duration: DEFAULT_TOAST_DURATION };
+  return { isToast: true, duration: toast.duration };
+}
 
 class NotifyManager {
   private entries: NotifyEntry[] = [];
@@ -62,13 +73,20 @@ class NotifyManager {
     const id = options.id ?? this.nextId();
     const existing = this.entries.find((t) => t.id === id);
 
+    // Loading entries always stay until explicitly updated/dismissed,
+    // regardless of any toast option passed in.
+    const isLoading = type === 'loading';
+    const { isToast, duration } = isLoading
+      ? { isToast: false, duration: Number.POSITIVE_INFINITY }
+      : resolveToast(options.toast);
+
     const entry: NotifyEntry = {
       id,
       type,
       message,
       createdAt: Date.now(),
-      duration: options.duration ?? DEFAULT_DURATION,
-      persistent: type === 'loading',
+      duration,
+      persistent: !isToast,
       spinnerIndex: existing?.spinnerIndex ?? 0,
     };
 
@@ -88,11 +106,16 @@ class NotifyManager {
     const entry = this.entries.find((t) => t.id === id);
     if (!entry) return this.add(type, message, { ...options, id });
 
+    const isLoading = type === 'loading';
+    const { isToast, duration } = isLoading
+      ? { isToast: false, duration: Number.POSITIVE_INFINITY }
+      : resolveToast(options.toast);
+
     entry.type = type;
     entry.message = message;
     entry.createdAt = Date.now();
-    entry.duration = options.duration ?? DEFAULT_DURATION;
-    entry.persistent = type === 'loading';
+    entry.duration = duration;
+    entry.persistent = !isToast;
     return id;
   }
 
@@ -122,10 +145,7 @@ base.warning = (message: string, options?: NotifyOptions) =>
 base.info = (message: string, options?: NotifyOptions) =>
   manager.add('info', message, options);
 base.loading = (message: string, options?: NotifyOptions) =>
-  manager.add('loading', message, {
-    ...options,
-    duration: Number.POSITIVE_INFINITY,
-  });
+  manager.add('loading', message, options);
 base.dismiss = (id: string) => manager.dismiss(id);
 base.clear = () => manager.clear();
 
@@ -138,10 +158,7 @@ base.promise = async <T>(
   },
   options?: NotifyOptions,
 ) => {
-  const id = manager.add('loading', messages.loading, {
-    ...options,
-    duration: Number.POSITIVE_INFINITY,
-  });
+  const id = manager.add('loading', messages.loading, options);
 
   try {
     const data = await promise;
