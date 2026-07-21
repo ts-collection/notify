@@ -54,33 +54,4 @@ base.promise = async <T>(
 base.dismiss = (id: string) => manager.dismiss(id);
 base.clear = () => manager.clear();
 
-base.promise = async <T>(
-  promise: Promise<T>,
-  messages: {
-    loading: string;
-    success: string | ((data: T) => string);
-    error: string | ((err: unknown) => string);
-  },
-  options?: NotifyOptions,
-) => {
-  const id = manager.add('loading', messages.loading, options);
-
-  try {
-    const data = await promise;
-    const successMessage =
-      typeof messages.success === 'function'
-        ? messages.success(data)
-        : messages.success;
-    manager.update(id, 'success', successMessage, options);
-    return data;
-  } catch (err) {
-    const errorMessage =
-      typeof messages.error === 'function'
-        ? messages.error(err)
-        : messages.error;
-    manager.update(id, 'error', errorMessage, options);
-    throw err;
-  }
-};
-
 export const notify = base;

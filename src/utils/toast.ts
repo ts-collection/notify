@@ -1,21 +1,34 @@
+import type { NotifyOptions } from '../types';
 import { notify } from './notify';
 
-function toast(msg: string, opts?: { id?: string }) {
-  return notify(msg, { ...opts, toast: true });
+type ToastOptions = Omit<NotifyOptions, 'toast'> & { duration?: number };
+
+function toToastOptions(opts?: ToastOptions): NotifyOptions {
+  const { duration, ...rest } = opts ?? {};
+  return { ...rest, toast: duration ? { duration } : true };
 }
-toast.success = (msg: string, opts?: { id?: string }) =>
-  notify.success(msg, { ...opts, toast: true });
-toast.error = (msg: string, opts?: { id?: string }) =>
-  notify.error(msg, { ...opts, toast: true });
-toast.warning = (msg: string, opts?: { id?: string }) =>
-  notify.warning(msg, { ...opts, toast: true });
-toast.info = (msg: string, opts?: { id?: string }) =>
-  notify.info(msg, { ...opts, toast: true });
+
+function toast(msg: string, opts?: ToastOptions) {
+  return notify(msg, toToastOptions(opts));
+}
+toast.success = (msg: string, opts?: ToastOptions) =>
+  notify.success(msg, toToastOptions(opts));
+toast.error = (msg: string, opts?: ToastOptions) =>
+  notify.error(msg, toToastOptions(opts));
+toast.warning = (msg: string, opts?: ToastOptions) =>
+  notify.warning(msg, toToastOptions(opts));
+toast.info = (msg: string, opts?: ToastOptions) =>
+  notify.info(msg, toToastOptions(opts));
 
 toast.loading = notify.loading;
-toast.promise = notify.promise;
+
+toast.promise = <T>(
+  promiseOrFn: Promise<T> | (() => Promise<T>),
+  messages: Parameters<typeof notify.promise>[1],
+  opts?: ToastOptions,
+) => notify.promise(promiseOrFn, messages, toToastOptions(opts));
+
 toast.dismiss = notify.dismiss;
 toast.clear = notify.clear;
-toast.promise = notify.promise;
 
 export { toast };
