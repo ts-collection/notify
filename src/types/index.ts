@@ -6,11 +6,14 @@ export type NotifyType =
   | 'info'
   | 'loading';
 
+// NOTE: developer options
 export type NotifyOptions = {
-  toast?: boolean | { duration: number };
   id?: string;
+  toast?: boolean | { duration: number };
+  keepAlive?: boolean;
 };
 
+// NOTE: internal options
 export type NotifyEntry = {
   id: string;
   type: NotifyType;
@@ -18,5 +21,6 @@ export type NotifyEntry = {
   createdAt: number;
   duration: number;
   persistent: boolean;
+  keepAlive: boolean;
   spinnerIndex: number;
 };

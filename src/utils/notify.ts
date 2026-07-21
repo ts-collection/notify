@@ -36,9 +36,21 @@ class NotifyManager {
   }
 
   private ensureLoop() {
-    if (this.timer) return;
-    this.timer = setInterval(() => this.render(), 80);
-    this.render();
+    if (!this.timer) {
+      this.timer = setInterval(() => this.render(), 80);
+      this.render();
+    }
+    this.syncRefState();
+  }
+
+  // Keep the interval ref'd (blocks process exit) only while at least
+  // one active entry asked to `keepAlive`. Otherwise unref it so a
+  // lingering notify never keeps the CLI alive on its own.
+  private syncRefState() {
+    if (!this.timer) return;
+    const shouldKeepAlive = this.entries.some((t) => t.keepAlive);
+    if (shouldKeepAlive) this.timer.ref();
+    else this.timer.unref();
   }
 
   private stopLoopIfIdle() {
@@ -67,14 +79,13 @@ class NotifyManager {
     });
 
     logUpdate(lines.join('\n'));
+    this.syncRefState(); // an expired keepAlive entry may have just been filtered out
   }
 
   add(type: NotifyType, message: string, options: NotifyOptions = {}) {
     const id = options.id ?? this.nextId();
     const existing = this.entries.find((t) => t.id === id);
 
-    // Loading entries always stay until explicitly updated/dismissed,
-    // regardless of any toast option passed in.
     const isLoading = type === 'loading';
     const { isToast, duration } = isLoading
       ? { isToast: false, duration: Number.POSITIVE_INFINITY }
@@ -87,6 +98,7 @@ class NotifyManager {
       createdAt: Date.now(),
       duration,
       persistent: !isToast,
+      keepAlive: options.keepAlive ?? false,
       spinnerIndex: existing?.spinnerIndex ?? 0,
     };
 
@@ -116,11 +128,14 @@ class NotifyManager {
     entry.createdAt = Date.now();
     entry.duration = duration;
     entry.persistent = !isToast;
+    entry.keepAlive = options.keepAlive ?? entry.keepAlive;
+    this.syncRefState();
     return id;
   }
 
   dismiss(id: string) {
     this.entries = this.entries.filter((t) => t.id !== id);
+    this.syncRefState();
     this.stopLoopIfIdle();
   }
 
