@@ -1,9 +1,7 @@
 import logUpdate from 'log-update';
 import type { NotifyEntry, NotifyOptions, NotifyType } from '../types';
 import { color } from './colors';
-
-const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-const DEFAULT_TOAST_DURATION = 3000;
+import { DEFAULT_TOAST_DURATION, SPINNER_FRAMES } from './constants';
 
 const icon = (t: NotifyEntry) => {
   if (t.type === 'loading')

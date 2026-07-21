@@ -13,6 +13,7 @@ toast.info = (msg: string, opts?: { id?: string }) =>
   notify.info(msg, { ...opts, toast: true });
 
 toast.loading = notify.loading;
+toast.promise = notify.promise;
 toast.dismiss = notify.dismiss;
 toast.clear = notify.clear;
 toast.promise = notify.promise;

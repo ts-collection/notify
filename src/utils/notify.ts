@@ -17,6 +17,40 @@ base.info = (message: string, options?: NotifyOptions) =>
   manager.add('info', message, options);
 base.loading = (message: string, options?: NotifyOptions) =>
   manager.add('loading', message, options);
+base.promise = async <T>(
+  promiseOrFn: Promise<T> | (() => Promise<T>),
+  messages: {
+    loading: string;
+    success: string | ((data: T) => string);
+    error: string | ((error: unknown) => string);
+    finally?: () => void | Promise<void>;
+  },
+  options?: NotifyOptions,
+): Promise<T> => {
+  const promise =
+    typeof promiseOrFn === 'function' ? promiseOrFn() : promiseOrFn;
+
+  const id = manager.add('loading', messages.loading, options);
+
+  try {
+    const data = await promise;
+    const successMessage =
+      typeof messages.success === 'function'
+        ? messages.success(data)
+        : messages.success;
+    manager.update(id, 'success', successMessage, options);
+    return data;
+  } catch (err) {
+    const errorMessage =
+      typeof messages.error === 'function'
+        ? messages.error(err)
+        : messages.error;
+    manager.update(id, 'error', errorMessage, options);
+    throw err;
+  } finally {
+    await messages.finally?.();
+  }
+};
 base.dismiss = (id: string) => manager.dismiss(id);
 base.clear = () => manager.clear();
 
