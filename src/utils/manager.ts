@@ -1,7 +1,9 @@
-import logUpdate from 'log-update';
+import { createLogUpdate } from 'log-update';
 import type { NotifyEntry, NotifyOptions, NotifyType } from '../types';
 import { color } from './colors';
 import { DEFAULT_TOAST_DURATION, SPINNER_FRAMES } from './constants';
+
+const logUpdate = createLogUpdate(process.stderr);
 
 const icon = (t: NotifyEntry) => {
   if (t.type === 'loading')
@@ -13,10 +15,6 @@ const icon = (t: NotifyEntry) => {
   return color.dim('●');
 };
 
-// Resolve the `toast` option into a { isToast, duration } pair.
-// - falsy (undefined/false) -> not a toast, stays until dismissed/replaced
-// - true                    -> toast with the default duration
-// - { duration }            -> toast with a custom duration
 function resolveToast(toast: NotifyOptions['toast']) {
   if (!toast) return { isToast: false, duration: Number.POSITIVE_INFINITY };
   if (toast === true)
@@ -28,22 +26,27 @@ export class NotifyManager {
   private entries: NotifyEntry[] = [];
   private timer: ReturnType<typeof setInterval> | null = null;
   private counter = 0;
+  private lastOutput = '';
 
   private nextId() {
     return `notify_${++this.counter}`;
   }
 
+  /** Whether any entry needs periodic attention (spinner animation or expiry). */
+  private needsTick(): boolean {
+    return this.entries.some(
+      (e) => e.type === 'loading' || !e.persistent,
+    );
+  }
+
+  /** Start the render interval if needed and not already running. */
   private ensureLoop() {
-    if (!this.timer) {
+    if (!this.timer && this.needsTick()) {
       this.timer = setInterval(() => this.render(), 80);
-      this.render();
     }
     this.syncRefState();
   }
 
-  // Keep the interval ref'd (blocks process exit) only while at least
-  // one active entry asked to `keepAlive`. Otherwise unref it so a
-  // lingering notify never keeps the CLI alive on its own.
   private syncRefState() {
     if (!this.timer) return;
     const shouldKeepAlive = this.entries.some((t) => t.keepAlive);
@@ -51,14 +54,7 @@ export class NotifyManager {
     else this.timer.unref();
   }
 
-  private stopLoopIfIdle() {
-    if (this.entries.length === 0 && this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-      logUpdate.clear();
-    }
-  }
-
+  /** Render current entries to terminal. Skips logUpdate when output unchanged. */
   private render() {
     const now = Date.now();
     this.entries = this.entries.filter(
@@ -66,7 +62,11 @@ export class NotifyManager {
     );
 
     if (this.entries.length === 0) {
-      this.stopLoopIfIdle();
+      if (this.lastOutput !== '') {
+        this.lastOutput = '';
+        logUpdate.clear();
+      }
+      this.stopLoop();
       return;
     }
 
@@ -76,8 +76,26 @@ export class NotifyManager {
       return line;
     });
 
-    logUpdate(lines.join('\n'));
-    this.syncRefState(); // an expired keepAlive entry may have just been filtered out
+    const output = lines.join('\n');
+
+    if (output !== this.lastOutput) {
+      this.lastOutput = output;
+      logUpdate(output);
+    }
+
+    this.syncRefState();
+
+    // Stop interval if no more periodic work needed (all entries static + persistent).
+    if (!this.needsTick()) {
+      this.stopLoop();
+    }
+  }
+
+  private stopLoop() {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
   }
 
   add(type: NotifyType, message: string, options: NotifyOptions = {}) {
@@ -103,6 +121,7 @@ export class NotifyManager {
     if (existing) Object.assign(existing, entry);
     else this.entries.push(entry);
 
+    this.render();
     this.ensureLoop();
     return id;
   }
@@ -127,18 +146,27 @@ export class NotifyManager {
     entry.duration = duration;
     entry.persistent = !isToast;
     entry.keepAlive = options.keepAlive ?? entry.keepAlive;
-    this.syncRefState();
+
+    if (type === 'loading') {
+      entry.spinnerIndex = 0;
+    }
+
+    this.render();
+    this.ensureLoop();
     return id;
   }
 
   dismiss(id: string) {
     this.entries = this.entries.filter((t) => t.id !== id);
-    this.syncRefState();
-    this.stopLoopIfIdle();
+    this.render();
   }
 
   clear() {
     this.entries = [];
-    this.stopLoopIfIdle();
+    if (this.lastOutput !== '') {
+      this.lastOutput = '';
+      logUpdate.clear();
+    }
+    this.stopLoop();
   }
 }

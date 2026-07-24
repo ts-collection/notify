@@ -1,6 +1,6 @@
 {
   "name": "@ts-utilities/notify",
-  "version": "0.0.4",
+  "version": "0.0.6",
   "author": "Sohan Emon <sohanemon@outlook.com>",
   "description": "Sonner like notifier for cli",
   "type": "module",

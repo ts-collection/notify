@@ -11,7 +11,10 @@ const { mockLogUpdate, mockLogUpdateClear } = vi.hoisted(() => {
 });
 
 vi.mock('log-update', () => ({
-  default: Object.assign(mockLogUpdate, { clear: mockLogUpdateClear }),
+  createLogUpdate: () => {
+    const fn = Object.assign(mockLogUpdate, { clear: mockLogUpdateClear });
+    return fn;
+  },
 }));
 
 // ---------------------------------------------------------------------------

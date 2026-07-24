@@ -7,7 +7,8 @@ const { mockLogUpdate, mockLogUpdateClear } = vi.hoisted(() => {
 });
 
 vi.mock('log-update', () => ({
-  default: Object.assign(mockLogUpdate, { clear: mockLogUpdateClear }),
+  createLogUpdate: () =>
+    Object.assign(mockLogUpdate, { clear: mockLogUpdateClear }),
 }));
 
 vi.useFakeTimers({
