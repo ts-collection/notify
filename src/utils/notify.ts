@@ -1,4 +1,4 @@
-import type { NotifyOptions } from '../types';
+import type { NotifyOptions, PromiseMessages } from '../types';
 import { NotifyManager } from './manager';
 
 const manager = new NotifyManager();
@@ -17,34 +17,40 @@ base.info = (message: string, options?: NotifyOptions) =>
   manager.add('info', message, options);
 base.loading = (message: string, options?: NotifyOptions) =>
   manager.add('loading', message, options);
+function deriveLabel(
+  promiseOrFn: Promise<unknown> | (() => Promise<unknown>),
+): string {
+  if (typeof promiseOrFn === 'function') {
+    const name = promiseOrFn.name;
+    if (name) return `${name}: `;
+  }
+  return '';
+}
+
 base.promise = async <T>(
   promiseOrFn: Promise<T> | (() => Promise<T>),
-  messages: {
-    loading: string;
-    success: string | ((data: T) => string);
-    error: string | ((error: unknown) => string);
-    finally?: () => void | Promise<void>;
-  },
+  messages: PromiseMessages<T> = {},
   options?: NotifyOptions,
 ): Promise<T> => {
   const promise =
     typeof promiseOrFn === 'function' ? promiseOrFn() : promiseOrFn;
 
-  const id = manager.add('loading', messages.loading, options);
+  const label = deriveLabel(promiseOrFn);
+  const loadingMsg = messages.loading ?? `${label}Loading...`;
+
+  const id = manager.add('loading', loadingMsg, options);
 
   try {
     const data = await promise;
+    const rawSuccess = messages.success ?? `${label}Completed`;
     const successMessage =
-      typeof messages.success === 'function'
-        ? messages.success(data)
-        : messages.success;
+      typeof rawSuccess === 'function' ? rawSuccess(data) : rawSuccess;
     manager.update(id, 'success', successMessage, options);
     return data;
   } catch (err) {
+    const rawError = messages.error ?? `${label}Failed`;
     const errorMessage =
-      typeof messages.error === 'function'
-        ? messages.error(err)
-        : messages.error;
+      typeof rawError === 'function' ? rawError(err) : rawError;
     manager.update(id, 'error', errorMessage, options);
     throw err;
   } finally {

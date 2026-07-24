@@ -187,6 +187,68 @@ describe('toast (auto-dismiss)', () => {
 });
 
 // ============================================================================
+// notify.promise – default messages / name labeling
+// ============================================================================
+describe('notify.promise – defaults & name labeling', () => {
+  it('uses defaults when messages is empty', async () => {
+    const p = Promise.resolve('ok');
+    await notify.promise(p);
+    tick();
+    expect(lastRender()).toMatch(/Completed/);
+  });
+
+  it('uses defaults when messages is undefined', async () => {
+    const p = Promise.resolve('ok');
+    await notify.promise(p, undefined);
+    tick();
+    expect(lastRender()).toMatch(/Completed/);
+  });
+
+  it('default error message on reject', async () => {
+    const p = Promise.reject(new Error('crash'));
+    await expect(notify.promise(p)).rejects.toThrow('crash');
+    tick();
+    expect(lastRender()).toMatch(/Failed/);
+  });
+
+  it('prefixes named function name in defaults', async () => {
+    async function fetchData() {
+      return 'data';
+    }
+    await notify.promise(fetchData);
+    tick();
+    expect(lastRender()).toMatch(/fetchData/);
+  });
+
+  it('partial messages override only specified fields', async () => {
+    await notify.promise(Promise.resolve('ok'), {
+      loading: 'custom loading',
+    });
+    tick();
+    // loading msg seen before tick, then success defaults to 'Completed'
+    expect(lastRender()).toMatch(/Completed/);
+  });
+
+  it('success callback still works with default fallback', async () => {
+    await notify.promise(Promise.resolve(42), {
+      success: (n: number) => `got ${n}`,
+    });
+    tick();
+    expect(lastRender()).toMatch(/got 42/);
+  });
+
+  it('error callback still works with default fallback', async () => {
+    await expect(
+      notify.promise(Promise.reject(new Error('fail')), {
+        error: (e: unknown) => `err: ${(e as Error).message}`,
+      }),
+    ).rejects.toThrow('fail');
+    tick();
+    expect(lastRender()).toMatch(/err: fail/);
+  });
+});
+
+// ============================================================================
 // notify.promise
 // ============================================================================
 describe('notify.promise', () => {

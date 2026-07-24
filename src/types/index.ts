@@ -14,6 +14,13 @@ export type NotifyOptions = {
 };
 
 // NOTE: internal options
+export type PromiseMessages<T = unknown> = {
+  loading?: string;
+  success?: string | ((data: T) => string);
+  error?: string | ((error: unknown) => string);
+  finally?: () => void | Promise<void>;
+};
+
 export type NotifyEntry = {
   id: string;
   type: NotifyType;
