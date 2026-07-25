@@ -3,8 +3,6 @@ import type { NotifyEntry, NotifyOptions, NotifyType } from '../types';
 import { color } from './colors';
 import { DEFAULT_TOAST_DURATION, SPINNER_FRAMES } from './constants';
 
-const logUpdate = createLogUpdate(process.stderr);
-
 const icon = (t: NotifyEntry) => {
   if (t.type === 'loading')
     return color.info(SPINNER_FRAMES[t.spinnerIndex % SPINNER_FRAMES.length]);
@@ -25,6 +23,7 @@ function resolveToast(toast: NotifyOptions['toast']) {
 export class NotifyManager {
   private entries: NotifyEntry[] = [];
   private timer: ReturnType<typeof setInterval> | null = null;
+  private logUpdate = createLogUpdate(process.stderr);
   private counter = 0;
   private lastOutput = '';
 
@@ -34,9 +33,7 @@ export class NotifyManager {
 
   /** Whether any entry needs periodic attention (spinner animation or expiry). */
   private needsTick(): boolean {
-    return this.entries.some(
-      (e) => e.type === 'loading' || !e.persistent,
-    );
+    return this.entries.some((e) => e.type === 'loading' || !e.persistent);
   }
 
   /** Start the render interval if needed and not already running. */
@@ -64,7 +61,7 @@ export class NotifyManager {
     if (this.entries.length === 0) {
       if (this.lastOutput !== '') {
         this.lastOutput = '';
-        logUpdate.clear();
+        this.logUpdate.clear();
       }
       this.stopLoop();
       return;
@@ -80,7 +77,7 @@ export class NotifyManager {
 
     if (output !== this.lastOutput) {
       this.lastOutput = output;
-      logUpdate(output);
+      this.logUpdate(output);
     }
 
     this.syncRefState();
@@ -165,7 +162,7 @@ export class NotifyManager {
     this.entries = [];
     if (this.lastOutput !== '') {
       this.lastOutput = '';
-      logUpdate.clear();
+      this.logUpdate.clear();
     }
     this.stopLoop();
   }

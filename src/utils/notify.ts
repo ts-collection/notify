@@ -1,4 +1,5 @@
 import type { NotifyOptions, PromiseMessages } from '../types';
+import { deriveLabel } from './helpers';
 import { NotifyManager } from './manager';
 
 const manager = new NotifyManager();
@@ -17,16 +18,6 @@ base.info = (message: string, options?: NotifyOptions) =>
   manager.add('info', message, options);
 base.loading = (message: string, options?: NotifyOptions) =>
   manager.add('loading', message, options);
-function deriveLabel(
-  promiseOrFn: Promise<unknown> | (() => Promise<unknown>),
-): string {
-  if (typeof promiseOrFn === 'function') {
-    const name = promiseOrFn.name;
-    if (name) return `${name}: `;
-  }
-  return '';
-}
-
 base.promise = async <T>(
   promiseOrFn: Promise<T> | (() => Promise<T>),
   messages: PromiseMessages<T> = {},
