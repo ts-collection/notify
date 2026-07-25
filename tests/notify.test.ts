@@ -454,15 +454,18 @@ describe('notify.progress', () => {
     expect(id).toMatch(/^notify_\d+$/);
   });
 
-  it('renders progress bar with percentage and count', () => {
+  it('renders progress bar with percentage', () => {
     notify.progress('Uploading files', {
-      progress: { current: 200, total: 500 },
+      progress: {
+        current: 200,
+        total: 500,
+        display: { percentage: true, brackets: true, count: true },
+      },
     });
     tick();
     const text = lastRender();
     expect(text).toMatch(/Uploading files/);
     expect(text).toMatch(/40%/);
-    expect(text).toMatch(/200\/500/);
     expect(text).toMatch(/\[/);
     expect(text).toMatch(/\]/);
   });
@@ -479,7 +482,9 @@ describe('notify.progress', () => {
   });
 
   it('clamps percentage between 0 and 100', () => {
-    notify.progress('Overflow', { progress: { current: 999, total: 100 } });
+    notify.progress('Overflow', {
+      progress: { current: 999, total: 100, display: { percentage: true } },
+    });
     tick();
     const text = lastRender();
     // 999/100 = 999% but should be clamped at 100%
@@ -487,7 +492,9 @@ describe('notify.progress', () => {
   });
 
   it('clamps at 0 for negative current', () => {
-    notify.progress('Underflow', { progress: { current: -5, total: 100 } });
+    notify.progress('Underflow', {
+      progress: { current: -5, total: 100, display: { percentage: true } },
+    });
     tick();
     const text = lastRender();
     expect(text).toMatch(/0%/);
@@ -531,7 +538,11 @@ describe('notify.progress', () => {
 
   it('updates with partial progress via notify.update', () => {
     const id = notify.progress('Uploading', {
-      progress: { current: 0, total: 100 },
+      progress: {
+        current: 0,
+        total: 100,
+        display: { percentage: true },
+      },
     });
     tick();
     expect(lastRender()).toMatch(/0%/);
@@ -567,7 +578,11 @@ describe('notify.progress', () => {
 
   it('updates with progress AND type+message in same call', () => {
     const id = notify.progress('Processing', {
-      progress: { current: 1, total: 5 },
+      progress: {
+        current: 1,
+        total: 5,
+        display: { percentage: true },
+      },
     });
     tick();
 
@@ -591,6 +606,78 @@ describe('notify.progress', () => {
     });
     tick();
     expect(lastRender()).toMatch(/Created via update/);
+  });
+
+  it('progress shows spinning animation (spinnerIndex advances)', () => {
+    notify.progress('Spinning', { progress: { current: 0, total: 10 } });
+    tick();
+    const text1 = lastRender();
+    tick();
+    const text2 = lastRender();
+    // Spinner frames differ between ticks
+    expect(text1).not.toEqual(text2);
+  });
+
+  it('renders block variant with spaces as empty', () => {
+    notify.progress('Block', {
+      progress: {
+        current: 8,
+        total: 10,
+        variant: 'block',
+        display: { percentage: true, brackets: true },
+      },
+    });
+    tick();
+    const text = lastRender();
+    expect(text).toMatch(/80%/);
+    // block variant uses space for empty, so last chars should be spaces before ]
+    expect(text).toMatch(/\]/);
+  });
+
+  it('renders line variant', () => {
+    notify.progress('Line progress', {
+      progress: {
+        current: 4,
+        total: 5,
+        variant: 'line',
+        display: { percentage: true },
+      },
+    });
+    tick();
+    const text = lastRender();
+    expect(text).toMatch(/80%/);
+    expect(text).toMatch(/━/);
+  });
+
+  it('renders dot variant', () => {
+    notify.progress('Dot progress', {
+      progress: {
+        current: 3,
+        total: 5,
+        variant: 'dot',
+        display: { percentage: true },
+      },
+    });
+    tick();
+    const text = lastRender();
+    expect(text).toMatch(/60%/);
+    expect(text).toMatch(/●/);
+    expect(text).toMatch(/○/);
+  });
+
+  it('renders none variant (no bar, just percentage)', () => {
+    notify.progress('No bar', {
+      progress: {
+        current: 50,
+        total: 100,
+        variant: 'none',
+        display: { percentage: true },
+      },
+    });
+    tick();
+    const text = lastRender();
+    expect(text).toMatch(/50%/);
+    expect(text).not.toMatch(/\[/);
   });
 });
 

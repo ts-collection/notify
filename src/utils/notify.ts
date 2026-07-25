@@ -1,4 +1,4 @@
-import type { NotifyOptions, NotifyType, ProgressOptions, PromiseMessages } from '../types';
+import type { NotifyOptions, NotifyType, ProgressInitOptions, ProgressOptions, PromiseMessages } from '../types';
 import { deriveLabel } from './helpers';
 import { NotifyManager } from './manager';
 
@@ -21,7 +21,7 @@ base.loading = (message: string, options?: NotifyOptions) =>
 base.progress = (
   message: string,
   options?: NotifyOptions & {
-    progress?: ProgressOptions;
+    progress?: ProgressInitOptions;
   },
 ) => manager.add('progress', message, options);
 base.update = (
@@ -51,13 +51,13 @@ base.promise = async <T>(
     const rawSuccess = messages.success ?? `${label}Completed`;
     const successMessage =
       typeof rawSuccess === 'function' ? rawSuccess(data) : rawSuccess;
-    manager.update(id, { type: 'success', message: successMessage, options });
+    manager.update(id, { type: 'success', message: successMessage, ...(options ? { options } : {}) });
     return data;
   } catch (err) {
     const rawError = messages.error ?? `${label}Failed`;
     const errorMessage =
       typeof rawError === 'function' ? rawError(err) : rawError;
-    manager.update(id, { type: 'error', message: errorMessage, options });
+    manager.update(id, { type: 'error', message: errorMessage, ...(options ? { options } : {}) });
     throw err;
   } finally {
     await messages.finally?.();

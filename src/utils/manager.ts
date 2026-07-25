@@ -1,22 +1,74 @@
 import { createLogUpdate } from 'log-update';
-import type { NotifyEntry, NotifyOptions, NotifyType, ProgressOptions } from '../types';
+import type {
+  NotifyEntry,
+  NotifyOptions,
+  NotifyType,
+  ProgressInitOptions,
+  ProgressOptions,
+  ProgressVariant,
+} from '../types';
 import { color } from './colors';
 import { DEFAULT_TOAST_DURATION, SPINNER_FRAMES } from './constants';
 
-function formatProgress(progress: ProgressOptions): string {
-  const { current, total } = progress;
-  if (total === undefined) return `${current}`;
-  const percent = Math.min(100, Math.max(0, Math.round((current / total) * 100)));
-  const barWidth = 10;
-  const filled = Math.round((percent / 100) * barWidth);
-  const bar = '█'.repeat(filled) + '░'.repeat(barWidth - filled);
-  return `[${bar}] ${percent}% (${current}/${total})`;
+type ProgressBarSet = {
+  full: string;
+  empty: string;
+};
+
+const PROGRESS_BARS: Record<
+  Exclude<ProgressVariant, 'none'>,
+  ProgressBarSet
+> = {
+  bar: { full: '█', empty: '░' },
+  block: { full: '█', empty: ' ' },
+  line: { full: '━', empty: '─' },
+  dot: { full: '●', empty: '○' },
+};
+
+function formatProgress(progress: ProgressInitOptions): string {
+  const { current, total, variant, display } = progress;
+  const { brackets = false, percentage = true, count = true } = display ?? {};
+
+  const parts: string[] = [];
+
+  if (total !== undefined) {
+    const v = variant ?? 'bar';
+    const percent = Math.min(
+      100,
+      Math.max(0, Math.round((current / total) * 100)),
+    );
+    const barWidth = 20;
+    const filled = Math.round((percent / 100) * barWidth);
+
+    if (v !== 'none') {
+      const set = PROGRESS_BARS[v];
+      const bar = set.full.repeat(filled) + set.empty.repeat(barWidth - filled);
+      if (brackets) {
+        parts.push(`[${bar}]`);
+      } else {
+        parts.push(bar);
+      }
+    }
+
+    if (percentage) {
+      parts.push(`${percent}%`);
+    }
+
+    if (count) {
+      parts.push(`(${current}/${total})`);
+    }
+  } else {
+    parts.push(`${current}`);
+  }
+
+  return parts.join(' ');
 }
 
 const icon = (t: NotifyEntry) => {
-  if (t.type === 'loading')
+  if (t.type === 'progress' && t.progress?.display?.spinner === false)
+    return color.info('▸');
+  if (t.type === 'loading' || t.type === 'progress')
     return color.info(SPINNER_FRAMES[t.spinnerIndex % SPINNER_FRAMES.length]);
-  if (t.type === 'progress') return color.info('▸');
   if (t.type === 'success') return color.success('√');
   if (t.type === 'error') return color.error('×');
   if (t.type === 'warning') return color.warn('▲');
@@ -44,7 +96,9 @@ export class NotifyManager {
 
   /** Whether any entry needs periodic attention (spinner animation, progress, or expiry). */
   private needsTick(): boolean {
-    return this.entries.some((e) => e.type === 'loading' || e.type === 'progress' || !e.persistent);
+    return this.entries.some(
+      (e) => e.type === 'loading' || e.type === 'progress' || !e.persistent,
+    );
   }
 
   /** Start the render interval if needed and not already running. */
@@ -81,7 +135,8 @@ export class NotifyManager {
     const lines = this.entries.map((t) => {
       const progressSuffix = t.progress ? ` ${formatProgress(t.progress)}` : '';
       const line = `${icon(t)} ${t.message}${progressSuffix}`;
-      if (t.type === 'loading') t.spinnerIndex++;
+      // Advance spinner for animated types
+      if (t.type === 'loading' || t.type === 'progress') t.spinnerIndex++;
       return line;
     });
 
@@ -107,7 +162,11 @@ export class NotifyManager {
     }
   }
 
-  add(type: NotifyType, message: string, options: NotifyOptions & { progress?: ProgressOptions } = {}) {
+  add(
+    type: NotifyType,
+    message: string,
+    options: NotifyOptions & { progress?: ProgressInitOptions } = {},
+  ) {
     const id = options.id ?? this.nextId();
     const existing = this.entries.find((t) => t.id === id);
 
@@ -151,21 +210,37 @@ export class NotifyManager {
     if (!entry) {
       const type = update.type ?? 'default';
       const message = update.message ?? '';
-      return this.add(type, message, { ...update.options, id, progress: update.progress });
+      return this.add(type, message, {
+        ...update.options,
+        id,
+        ...(update.progress
+          ? {
+              progress: {
+                ...update.progress,
+                display: {},
+              } as ProgressInitOptions,
+            }
+          : {}),
+      });
     }
 
     if (update.type !== undefined) {
       entry.type = update.type;
       // Clear progress when switching away from progress type
       if (update.type !== 'progress') {
-        entry.progress = undefined;
+        delete entry.progress;
       }
-      const isPersistent = update.type === 'loading' || update.type === 'progress';
+      const isPersistent =
+        update.type === 'loading' || update.type === 'progress';
       const { isToast, duration } = isPersistent
         ? { isToast: false, duration: Number.POSITIVE_INFINITY }
-        : resolveToast(update.options?.toast ?? entry.persistent ? undefined : { duration: entry.duration });
+        : resolveToast(
+            update.options?.toast ??
+              (entry.persistent ? undefined : { duration: entry.duration }),
+          );
       entry.duration = duration;
-      entry.persistent = !isToast || !update.options?.toast ? isPersistent : false;
+      entry.persistent =
+        !isToast || !update.options?.toast ? isPersistent : false;
     }
 
     if (update.message !== undefined) {
@@ -173,7 +248,15 @@ export class NotifyManager {
     }
 
     if (update.progress !== undefined) {
-      entry.progress = update.progress;
+      // Preserve initial variant/display options — update only touches current/total
+      entry.progress = {
+        ...entry.progress,
+        display: entry.progress?.display ?? {},
+        current: update.progress.current,
+        ...(update.progress.total !== undefined
+          ? { total: update.progress.total }
+          : {}),
+      };
     }
 
     entry.createdAt = Date.now();

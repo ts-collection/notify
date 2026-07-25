@@ -7,10 +7,21 @@ export type NotifyType =
   | 'loading'
   | 'progress';
 
-export type ProgressOptions = {
+export type ProgressVariant = 'bar' | 'block' | 'line' | 'dot' | 'none';
+
+export type ProgressInitOptions = {
   current: number;
   total?: number;
+  variant?: ProgressVariant;
+  display: Partial<{
+    spinner: boolean;
+    brackets: boolean;
+    percentage: boolean;
+    count: boolean;
+  }>;
 };
+
+export type ProgressOptions = Pick<ProgressInitOptions, 'current' | 'total'>;
 
 // NOTE: developer options
 export type NotifyOptions = {
@@ -36,5 +47,5 @@ export type NotifyEntry = {
   persistent: boolean;
   keepAlive: boolean;
   spinnerIndex: number;
-  progress?: ProgressOptions;
+  progress?: ProgressInitOptions;
 };
