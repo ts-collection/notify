@@ -9,6 +9,11 @@ export type NotifyType =
 
 export type ProgressVariant = 'bar' | 'block' | 'line' | 'dot' | 'none';
 
+export type ProgressBarSet = {
+  full: string;
+  empty: string;
+};
+
 export type ProgressInitOptions = {
   current: number;
   total?: number;
