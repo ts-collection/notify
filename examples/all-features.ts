@@ -41,6 +41,39 @@ await sleep(800);
 const aliveId = notify('keepAlive — process stays alive until dismiss', {
   keepAlive: true,
 });
+
+const progressTotal = 5;
+const progressId = notify.progress('Downloading assets…', {
+  progress: { current: 0, total: progressTotal },
+});
+for (let step = 1; step <= progressTotal; step++) {
+  await sleep(300);
+  notify.update(progressId, {
+    progress: { current: step, total: progressTotal },
+  });
+}
+notify.update(progressId, {
+  type: 'success',
+  message: 'Assets downloaded',
+});
+await sleep(500);
+
+// Progress with unknown total (just a count)
+const unknownId = notify.progress('Processing items…', {
+  progress: { current: 0 },
+});
+for (let i = 1; i <= 4; i++) {
+  await sleep(200);
+  notify.update(unknownId, {
+    progress: { current: i },
+  });
+}
+notify.update(unknownId, {
+  type: 'success',
+  message: 'All items processed',
+});
+await sleep(500);
+
 setTimeout(() => {
   notify.dismiss(aliveId);
   notify.success('keepAlive entry dismissed');

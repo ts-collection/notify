@@ -1,11 +1,22 @@
 import { createLogUpdate } from 'log-update';
-import type { NotifyEntry, NotifyOptions, NotifyType } from '../types';
+import type { NotifyEntry, NotifyOptions, NotifyType, ProgressOptions } from '../types';
 import { color } from './colors';
 import { DEFAULT_TOAST_DURATION, SPINNER_FRAMES } from './constants';
+
+function formatProgress(progress: ProgressOptions): string {
+  const { current, total } = progress;
+  if (total === undefined) return `${current}`;
+  const percent = Math.min(100, Math.max(0, Math.round((current / total) * 100)));
+  const barWidth = 10;
+  const filled = Math.round((percent / 100) * barWidth);
+  const bar = '█'.repeat(filled) + '░'.repeat(barWidth - filled);
+  return `[${bar}] ${percent}% (${current}/${total})`;
+}
 
 const icon = (t: NotifyEntry) => {
   if (t.type === 'loading')
     return color.info(SPINNER_FRAMES[t.spinnerIndex % SPINNER_FRAMES.length]);
+  if (t.type === 'progress') return color.info('▸');
   if (t.type === 'success') return color.success('√');
   if (t.type === 'error') return color.error('×');
   if (t.type === 'warning') return color.warn('▲');
@@ -31,9 +42,9 @@ export class NotifyManager {
     return `notify_${++this.counter}`;
   }
 
-  /** Whether any entry needs periodic attention (spinner animation or expiry). */
+  /** Whether any entry needs periodic attention (spinner animation, progress, or expiry). */
   private needsTick(): boolean {
-    return this.entries.some((e) => e.type === 'loading' || !e.persistent);
+    return this.entries.some((e) => e.type === 'loading' || e.type === 'progress' || !e.persistent);
   }
 
   /** Start the render interval if needed and not already running. */
@@ -68,7 +79,8 @@ export class NotifyManager {
     }
 
     const lines = this.entries.map((t) => {
-      const line = `${icon(t)} ${t.message}`;
+      const progressSuffix = t.progress ? ` ${formatProgress(t.progress)}` : '';
+      const line = `${icon(t)} ${t.message}${progressSuffix}`;
       if (t.type === 'loading') t.spinnerIndex++;
       return line;
     });
@@ -95,14 +107,16 @@ export class NotifyManager {
     }
   }
 
-  add(type: NotifyType, message: string, options: NotifyOptions = {}) {
+  add(type: NotifyType, message: string, options: NotifyOptions & { progress?: ProgressOptions } = {}) {
     const id = options.id ?? this.nextId();
     const existing = this.entries.find((t) => t.id === id);
 
-    const isLoading = type === 'loading';
-    const { isToast, duration } = isLoading
+    const isPersistent = type === 'loading' || type === 'progress';
+    const { isToast, duration } = isPersistent
       ? { isToast: false, duration: Number.POSITIVE_INFINITY }
       : resolveToast(options.toast);
+
+    const progress = options.progress;
 
     const entry: NotifyEntry = {
       id,
@@ -113,6 +127,7 @@ export class NotifyManager {
       persistent: !isToast,
       keepAlive: options.keepAlive ?? false,
       spinnerIndex: existing?.spinnerIndex ?? 0,
+      ...(progress ? { progress } : {}),
     };
 
     if (existing) Object.assign(existing, entry);
@@ -125,26 +140,49 @@ export class NotifyManager {
 
   update(
     id: string,
-    type: NotifyType,
-    message: string,
-    options: NotifyOptions = {},
+    update: {
+      type?: NotifyType;
+      message?: string;
+      progress?: ProgressOptions;
+      options?: NotifyOptions;
+    },
   ) {
     const entry = this.entries.find((t) => t.id === id);
-    if (!entry) return this.add(type, message, { ...options, id });
+    if (!entry) {
+      const type = update.type ?? 'default';
+      const message = update.message ?? '';
+      return this.add(type, message, { ...update.options, id, progress: update.progress });
+    }
 
-    const isLoading = type === 'loading';
-    const { isToast, duration } = isLoading
-      ? { isToast: false, duration: Number.POSITIVE_INFINITY }
-      : resolveToast(options.toast);
+    if (update.type !== undefined) {
+      entry.type = update.type;
+      // Clear progress when switching away from progress type
+      if (update.type !== 'progress') {
+        entry.progress = undefined;
+      }
+      const isPersistent = update.type === 'loading' || update.type === 'progress';
+      const { isToast, duration } = isPersistent
+        ? { isToast: false, duration: Number.POSITIVE_INFINITY }
+        : resolveToast(update.options?.toast ?? entry.persistent ? undefined : { duration: entry.duration });
+      entry.duration = duration;
+      entry.persistent = !isToast || !update.options?.toast ? isPersistent : false;
+    }
 
-    entry.type = type;
-    entry.message = message;
+    if (update.message !== undefined) {
+      entry.message = update.message;
+    }
+
+    if (update.progress !== undefined) {
+      entry.progress = update.progress;
+    }
+
     entry.createdAt = Date.now();
-    entry.duration = duration;
-    entry.persistent = !isToast;
-    entry.keepAlive = options.keepAlive ?? entry.keepAlive;
 
-    if (type === 'loading') {
+    if (update.options?.keepAlive !== undefined) {
+      entry.keepAlive = update.options.keepAlive;
+    }
+
+    if (update.type === 'loading') {
       entry.spinnerIndex = 0;
     }
 

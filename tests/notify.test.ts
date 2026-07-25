@@ -442,3 +442,155 @@ describe('edge cases', () => {
     tick();
   });
 });
+
+// ============================================================================
+// notify.progress
+// ============================================================================
+describe('notify.progress', () => {
+  it('creates a progress notification and returns an id', () => {
+    const id = notify.progress('Uploading', {
+      progress: { current: 0, total: 500 },
+    });
+    expect(id).toMatch(/^notify_\d+$/);
+  });
+
+  it('renders progress bar with percentage and count', () => {
+    notify.progress('Uploading files', {
+      progress: { current: 200, total: 500 },
+    });
+    tick();
+    const text = lastRender();
+    expect(text).toMatch(/Uploading files/);
+    expect(text).toMatch(/40%/);
+    expect(text).toMatch(/200\/500/);
+    expect(text).toMatch(/\[/);
+    expect(text).toMatch(/\]/);
+  });
+
+  it('renders current count only when total is unknown', () => {
+    notify.progress('Processing', { progress: { current: 42 } });
+    tick();
+    const text = lastRender();
+    expect(text).toMatch(/Processing/);
+    expect(text).toMatch(/42/);
+    expect(text).not.toMatch(/%/);
+    expect(text).not.toMatch(/\//);
+    expect(text).not.toMatch(/\[/);
+  });
+
+  it('clamps percentage between 0 and 100', () => {
+    notify.progress('Overflow', { progress: { current: 999, total: 100 } });
+    tick();
+    const text = lastRender();
+    // 999/100 = 999% but should be clamped at 100%
+    expect(text).toMatch(/100%/);
+  });
+
+  it('clamps at 0 for negative current', () => {
+    notify.progress('Underflow', { progress: { current: -5, total: 100 } });
+    tick();
+    const text = lastRender();
+    expect(text).toMatch(/0%/);
+  });
+
+  it('persists beyond default toast duration', () => {
+    notify.progress('Long op', { progress: { current: 0, total: 10 } });
+    tick();
+
+    vi.advanceTimersByTime(10_000);
+    tick();
+
+    expect(lastRender()).toMatch(/Long op/);
+  });
+
+  it('progress notifications keep the render loop alive', () => {
+    notify.progress('Ongoing', { progress: { current: 5, total: 10 } });
+    tick();
+
+    // Should still render after arbitrary time
+    vi.advanceTimersByTime(5000);
+    tick();
+
+    expect(lastRender()).toMatch(/Ongoing/);
+  });
+
+  it('can be dismissed', () => {
+    // Keep a persistent anchor so the render loop stays alive
+    notify('anchor');
+
+    const id = notify.progress('Dismiss me', {
+      progress: { current: 3, total: 10 },
+    });
+    tick();
+    expect(lastRender()).toMatch(/Dismiss me/);
+
+    notify.dismiss(id);
+    tick();
+    expect(lastRender()).not.toMatch(/Dismiss me/);
+  });
+
+  it('updates with partial progress via notify.update', () => {
+    const id = notify.progress('Uploading', {
+      progress: { current: 0, total: 100 },
+    });
+    tick();
+    expect(lastRender()).toMatch(/0%/);
+
+    notify.update(id, {
+      progress: { current: 75, total: 100 },
+    });
+    tick();
+
+    const text = lastRender();
+    expect(text).toMatch(/75%/);
+    expect(text).toMatch(/Uploading/);
+  });
+
+  it('updates with type and message via notify.update', () => {
+    const id = notify.progress('Uploading files', {
+      progress: { current: 100, total: 100 },
+    });
+    tick();
+
+    notify.update(id, {
+      type: 'success',
+      message: 'Upload completed',
+    });
+    tick();
+
+    const text = lastRender();
+    expect(text).toMatch(/Upload completed/);
+    // progress bar should be gone since we switched away from 'progress' type
+    expect(text).not.toMatch(/100%/);
+    expect(text).toMatch(/√/);
+  });
+
+  it('updates with progress AND type+message in same call', () => {
+    const id = notify.progress('Processing', {
+      progress: { current: 1, total: 5 },
+    });
+    tick();
+
+    notify.update(id, {
+      type: 'progress',
+      message: 'Still processing…',
+      progress: { current: 3, total: 5 },
+    });
+    tick();
+
+    const text = lastRender();
+    expect(text).toMatch(/Still processing/);
+    expect(text).toMatch(/60%/);
+  });
+
+  it('update creates a new entry when id does not exist', () => {
+    const id = notify.update('nonexistent', {
+      type: 'progress',
+      message: 'Created via update',
+      progress: { current: 0, total: 10 },
+    });
+    tick();
+    expect(lastRender()).toMatch(/Created via update/);
+  });
+});
+

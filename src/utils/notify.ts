@@ -1,4 +1,4 @@
-import type { NotifyOptions, PromiseMessages } from '../types';
+import type { NotifyOptions, NotifyType, ProgressOptions, PromiseMessages } from '../types';
 import { deriveLabel } from './helpers';
 import { NotifyManager } from './manager';
 
@@ -18,6 +18,21 @@ base.info = (message: string, options?: NotifyOptions) =>
   manager.add('info', message, options);
 base.loading = (message: string, options?: NotifyOptions) =>
   manager.add('loading', message, options);
+base.progress = (
+  message: string,
+  options?: NotifyOptions & {
+    progress?: ProgressOptions;
+  },
+) => manager.add('progress', message, options);
+base.update = (
+  id: string,
+  update: {
+    type?: NotifyType;
+    message?: string;
+    progress?: ProgressOptions;
+    options?: NotifyOptions;
+  },
+) => manager.update(id, update);
 base.promise = async <T>(
   promiseOrFn: Promise<T> | (() => Promise<T>),
   messages: PromiseMessages<T> = {},
@@ -36,13 +51,13 @@ base.promise = async <T>(
     const rawSuccess = messages.success ?? `${label}Completed`;
     const successMessage =
       typeof rawSuccess === 'function' ? rawSuccess(data) : rawSuccess;
-    manager.update(id, 'success', successMessage, options);
+    manager.update(id, { type: 'success', message: successMessage, options });
     return data;
   } catch (err) {
     const rawError = messages.error ?? `${label}Failed`;
     const errorMessage =
       typeof rawError === 'function' ? rawError(err) : rawError;
-    manager.update(id, 'error', errorMessage, options);
+    manager.update(id, { type: 'error', message: errorMessage, options });
     throw err;
   } finally {
     await messages.finally?.();

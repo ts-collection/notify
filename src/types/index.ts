@@ -4,7 +4,13 @@ export type NotifyType =
   | 'error'
   | 'warning'
   | 'info'
-  | 'loading';
+  | 'loading'
+  | 'progress';
+
+export type ProgressOptions = {
+  current: number;
+  total?: number;
+};
 
 // NOTE: developer options
 export type NotifyOptions = {
@@ -30,4 +36,5 @@ export type NotifyEntry = {
   persistent: boolean;
   keepAlive: boolean;
   spinnerIndex: number;
+  progress?: ProgressOptions;
 };
