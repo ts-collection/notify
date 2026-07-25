@@ -18,7 +18,7 @@ export type ProgressInitOptions = {
   current: number;
   total?: number;
   variant?: ProgressVariant;
-  display: Partial<{
+  display?: Partial<{
     spinner: boolean;
     brackets: boolean;
     percentage: boolean;

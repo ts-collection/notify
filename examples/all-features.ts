@@ -80,6 +80,7 @@ setTimeout(() => {
 }, 2000);
 await sleep(500);
 
+// NOTE: fire without blocking (no await)
 notify.promise(
   sleep(1500).then(() => ({ id: 1, name: 'example' })),
   {
@@ -90,7 +91,7 @@ notify.promise(
 );
 await sleep(500);
 
-notify
+await notify
   .promise(
     sleep(1200).then(() => Promise.reject(new Error('something went wrong'))),
     {
@@ -107,14 +108,14 @@ async function fetchUser() {
   return 'Alice';
 }
 
-notify.promise(fetchUser, {
+await notify.promise(fetchUser, {
   loading: 'fetchUser: loading…',
   success: (name: string) => `fetchUser: → ${name}`,
   error: 'fetchUser: failed',
 });
 await sleep(300);
 
-toast.promise(
+await toast.promise(
   sleep(1000).then(() => 42),
   {
     loading: 'toast.promise: loading…',
@@ -123,7 +124,7 @@ toast.promise(
 );
 await sleep(300);
 
-notify.promise(
+await notify.promise(
   sleep(800).then(() => 'done'),
   {
     loading: 'finally: loading…',
