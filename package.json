@@ -1,6 +1,6 @@
 {
   "name": "@ts-utilities/notify",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "author": "Sohan Emon <sohanemon@outlook.com>",
   "description": "Sonner like notifier for cli",
   "type": "module",
@@ -28,6 +28,7 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
+    "start": "node dist/index.js",
     "test": "vitest",
     "test:run": "vitest run --silent",
     "lint": "biome lint .",
