@@ -1,3 +1,11 @@
+import type {
+  BackgroundColorName,
+  ChalkInstance,
+  ForegroundColorName,
+  ModifierName,
+} from 'chalk';
+import type { NotifyColor } from './color';
+
 export type NotifyType =
   | 'default'
   | 'success'
@@ -28,11 +36,22 @@ export type ProgressInitOptions = {
 
 export type ProgressOptions = Pick<ProgressInitOptions, 'current' | 'total'>;
 
+export type ColorMode = 'icon-only' | 'text-only' | 'all' | 'none';
+
+// NOTE: resolved internal color config
+export type NotifyStyleOptions = {
+  mode?: ColorMode;
+  color?: ForegroundColorName | NotifyColor | ChalkInstance;
+  backgroundColor?: BackgroundColorName | NotifyColor | ChalkInstance;
+  modifier?: ModifierName | ModifierName[] | ChalkInstance | ChalkInstance[];
+};
+
 // NOTE: developer options
 export type NotifyOptions = {
   id?: string;
   toast?: boolean | { duration: number };
   keepAlive?: boolean;
+  style?: NotifyStyleOptions;
 };
 
 // NOTE: internal options
@@ -94,5 +113,6 @@ export type NotifyEntry = {
   persistent: boolean;
   keepAlive: boolean;
   spinnerIndex: number;
-  progress?: ProgressInitOptions;
+  style?: NotifyStyleOptions | undefined;
+  progress?: ProgressInitOptions | undefined;
 };
