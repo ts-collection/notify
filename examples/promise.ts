@@ -1,15 +1,6 @@
-/**
- * Promise — await .result from a PromiseHandle
- *
- * Run: bun run examples/08-promise.ts
- */
 import { notify } from '../src/index';
+import { sleep } from './helpers';
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-notify.clear();
-
-// Resolving promise
 const h1 = notify.promise(
   sleep(1500).then(() => ({ id: 1, name: 'example' })),
   {
@@ -19,11 +10,9 @@ const h1 = notify.promise(
   },
 );
 const data = await h1.result;
-console.log('Data:', data);
 
 await sleep(400);
 
-// Rejecting promise
 const h2 = notify.promise(
   sleep(1200).then(() => Promise.reject(new Error('something went wrong'))),
   {
@@ -36,7 +25,6 @@ await h2.result.catch(() => {});
 
 await sleep(400);
 
-// Named function
 async function fetchUser() {
   await sleep(1100);
   return 'Alice';
@@ -49,4 +37,3 @@ const h3 = notify.promise(fetchUser, {
 await h3.result;
 
 await sleep(500);
-notify.clear();

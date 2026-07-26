@@ -11,7 +11,7 @@ import type {
   ProgressStartMessages,
 } from '../types';
 
-// NOTE: union of the one-off progress function and the builder sub-methods
+// NOTE: union of one-off progress fn and builder sub-methods
 type ProgressFn = ((
   message: string,
   options?: NotifyOptions & { progress?: ProgressInitOptions },
@@ -21,6 +21,7 @@ type ProgressFn = ((
     messages?: ProgressStartMessages & { loading?: string },
   ) => ProgressHandle;
 };
+
 import { deriveLabel } from './helpers';
 import { NotifyManager } from './manager';
 

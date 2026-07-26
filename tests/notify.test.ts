@@ -1,9 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// ---------------------------------------------------------------------------
-// Mock log-update before importing notify so the module gets the mock
-// NOTE: vi.mock factory is hoisted, so shared vars must use vi.hoisted().
-// ---------------------------------------------------------------------------
+// NOTE: mock log-update before importing notify; vi.mock is hoisted so shared vars use vi.hoisted()
 const { mockLogUpdate, mockLogUpdateClear } = vi.hoisted(() => {
   const logUpdate = vi.fn();
   const clear = vi.fn();
@@ -17,27 +14,23 @@ vi.mock('log-update', () => ({
   },
 }));
 
-// ---------------------------------------------------------------------------
-// Fake timers so we control the internal render interval (80ms)
-// ---------------------------------------------------------------------------
+// NOTE: fake timers to control the internal 80ms render interval
 vi.useFakeTimers();
 
 import { notify } from '../src/utils/notify';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-/** Strip ANSI escape sequences from a string */
+// NOTE: helpers
+// NOTE: strip ANSI escape sequences
 function stripAnsi(s: string): string {
   return s.replace(/\u001b\[[0-9;]*m/g, '').trim();
 }
 
-/** Advance fake timers past the render interval so pending renders fire */
+// NOTE: advance past render interval so pending renders fire
 function tick(): void {
   vi.advanceTimersByTime(80);
 }
 
-/** Return the last rendered output (plain text, no ANSI) */
+// NOTE: last rendered output (plain text, no ANSI)
 function lastRender(): string {
   const calls = mockLogUpdate.mock.calls;
   if (calls.length === 0) return '';
@@ -58,9 +51,7 @@ afterEach(() => {
   notify.clear();
 });
 
-// ============================================================================
-// notify – basic add / convenience methods
-// ============================================================================
+// NOTE: basic add / convenience methods
 describe('notify – basic API', () => {
   it('notify(message) returns a handle with id', () => {
     const handle = notify('hello');
@@ -99,9 +90,7 @@ describe('notify – basic API', () => {
   });
 });
 
-// ============================================================================
-// notify.dismiss / notify.clear
-// ============================================================================
+// NOTE: dismiss / clear
 describe('notify.dismiss / notify.clear', () => {
   it('handle.dismiss removes a single entry', () => {
     notify('stay');
@@ -133,9 +122,7 @@ describe('notify.dismiss / notify.clear', () => {
   });
 });
 
-// ============================================================================
-// toast (auto-dismiss) behaviour
-// ============================================================================
+// NOTE: toast (auto-dismiss) behaviour
 describe('toast (auto-dismiss)', () => {
   it('toast: true auto-removes after default duration', () => {
     // Add a persistent entry so the render loop stays active
@@ -191,9 +178,7 @@ describe('toast (auto-dismiss)', () => {
   });
 });
 
-// ============================================================================
-// notify.promise – default messages / name labeling
-// ============================================================================
+// NOTE: promise default messages / name labeling
 describe('notify.promise – defaults & name labeling', () => {
   it('uses defaults when messages is empty', async () => {
     const handle = notify.promise(Promise.resolve('ok'));
@@ -262,9 +247,7 @@ describe('notify.promise – defaults & name labeling', () => {
   });
 });
 
-// ============================================================================
-// notify.promise
-// ============================================================================
+// NOTE: promise
 describe('notify.promise', () => {
   it('resolves and shows success message from string', async () => {
     const handle = notify.promise(Promise.resolve(42), {
@@ -327,9 +310,7 @@ describe('notify.promise', () => {
   });
 });
 
-// ============================================================================
-// Edge Cases
-// ============================================================================
+// NOTE: edge cases
 describe('edge cases', () => {
   it('clearing when already empty does not throw', () => {
     expect(() => notify.clear()).not.toThrow();
@@ -432,9 +413,7 @@ describe('edge cases', () => {
   });
 });
 
-// ============================================================================
-// notify.progress
-// ============================================================================
+// NOTE: progress
 describe('notify.progress', () => {
   it('creates a progress notification and returns a handle', () => {
     const handle = notify.progress('Uploading', {
@@ -670,9 +649,7 @@ describe('notify.progress', () => {
   });
 });
 
-// ============================================================================
-// notify.progress.start builder API
-// ============================================================================
+// NOTE: progress.start builder API
 describe('notify.progress.start builder', () => {
   it('returns a ProgressHandle with advance, set, done, fail, label', () => {
     const bar = notify.progress.start({ total: 5 });

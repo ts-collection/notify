@@ -1,13 +1,5 @@
-/**
- * Finally callback — called after resolve or reject
- *
- * Run: bun run examples/10-finally.ts
- */
 import { notify } from '../src/index';
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-notify.clear();
+import { sleep } from './helpers';
 
 const h = notify.promise(sleep(800).then(() => 'done'), {
   loading: 'finally: loading…',
@@ -18,4 +10,3 @@ const h = notify.promise(sleep(800).then(() => 'done'), {
 await h.result;
 
 await sleep(500);
-notify.clear();

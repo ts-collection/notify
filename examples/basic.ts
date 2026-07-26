@@ -1,13 +1,5 @@
-/**
- * Basic messages — default, success, error, warning, info
- *
- * Run: bun run examples/01-basic.ts
- */
 import { notify } from '../src/index';
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-notify.clear();
+import { sleep } from './helpers';
 
 notify('Basic persistent message (default type)');
 await sleep(500);
@@ -18,4 +10,3 @@ notify.warning('Warning message');
 notify.info('Info message');
 
 await sleep(1500);
-notify.clear();

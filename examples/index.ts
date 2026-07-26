@@ -1,8 +1,3 @@
-/**
- * Run all examples sequentially
- *
- * Run: bun run examples/index.ts
- */
 import './basic';
 import './loading';
 import './toast';
@@ -16,3 +11,6 @@ import './finally';
 import './concurrent';
 import './dismiss';
 import './keepalive';
+import { notify } from '../src';
+
+notify.clear();

@@ -1,13 +1,5 @@
-/**
- * Progress (one-off) — create with total, update manually
- *
- * Run: bun run examples/05-progress-legacy.ts
- */
 import { notify } from '../src/index';
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-notify.clear();
+import { sleep } from './helpers';
 
 const total = 5;
 const bar = notify.progress('Downloading assets…', {
@@ -20,4 +12,3 @@ for (let step = 1; step <= total; step++) {
 bar.update({ type: 'success', message: 'Assets downloaded' });
 
 await sleep(500);
-notify.clear();
