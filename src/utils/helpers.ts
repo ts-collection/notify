@@ -1,10 +1,10 @@
+import type { ChalkInstance } from 'chalk';
 import chalk from 'chalk';
 import type {
-  NotifyColorConfig,
-  NotifyColorInput,
-  NotifyColorStyle,
+  NotifyColor,
   NotifyEntry,
   NotifyOptions,
+  NotifyStyleOptions,
   NotifyType,
   ProgressBarSet,
   ProgressInitOptions,
@@ -33,28 +33,77 @@ const PROGRESS_BARS: Record<
   dot: { full: '●', empty: '○' },
 };
 
-// NOTE: resolve user color input to internal config
-export function resolveColor(
-  input: NotifyColorInput | undefined,
-): NotifyColorConfig {
-  if (!input) return { mode: 'all' } as NotifyColorConfig;
+// NOTE: resolve a color value to a chalk instance
+function chalkFromColor(
+  color?: NotifyColor,
+  background = false,
+): ChalkInstance | undefined {
+  if (!color) return undefined;
 
-  // Function — custom styler with 'all' mode
-  if (typeof input === 'function') {
-    return { mode: 'all', styler: input } as NotifyColorConfig;
+  if (typeof color !== 'string') return color;
+
+  if (color.startsWith('#')) {
+    return background ? chalk.bgHex(color) : chalk.hex(color);
   }
 
-  // Object — optional mode + optional styler
-  const config: NotifyColorConfig = { mode: input.mode ?? 'all' };
-  if (input.color) config.styler = input.color;
-  return config;
+  if (color.startsWith('rgb')) {
+    const nums = color.match(/\d+/g)?.map(Number);
+
+    if (nums && nums.length >= 3) {
+      return background
+        ? chalk.bgRgb(nums[0]!, nums[1]!, nums[2]!)
+        : chalk.rgb(nums[0]!, nums[1]!, nums[2]!);
+    }
+  }
+
+  const key = background
+    ? (`bg${color[0]!.toUpperCase()}${color.slice(1)}` as keyof typeof chalk)
+    : (color as keyof typeof chalk);
+
+  return chalk[key] as ChalkInstance;
+}
+
+// NOTE: combine style options into a single chalk styler function
+// Returns undefined when no custom styles are configured (caller falls back to type-based coloring)
+export function resolveStyle(
+  style: NotifyStyleOptions | undefined,
+): ((text: string) => string) | undefined {
+  if (!style) return undefined;
+  const { color, backgroundColor, modifier } = style;
+  if (!color && !backgroundColor && !modifier) return undefined;
+
+  let styler: ChalkInstance = chalk;
+
+  if (color) {
+    const fn = chalkFromColor(color);
+    if (fn) styler = fn;
+  }
+
+  if (backgroundColor) {
+    const fn = chalkFromColor(backgroundColor, true);
+    if (fn) styler = fn;
+  }
+
+  if (modifier) {
+    const mods = Array.isArray(modifier) ? modifier : [modifier];
+    for (const mod of mods) {
+      if (typeof mod === 'string') {
+        const m = (styler as unknown as Record<string, ChalkInstance>)[mod];
+        if (m) styler = m;
+      } else {
+        styler = mod;
+      }
+    }
+  }
+
+  return (text: string) => styler(text);
 }
 
 // NOTE: wrap text in type-appropriate or custom color
 export function colorMessage(
   type: NotifyType,
   msg: string,
-  styler?: NotifyColorStyle,
+  styler?: (text: string) => string,
 ): string {
   if (styler) return styler(msg);
   switch (type) {
@@ -127,7 +176,7 @@ export function getIconChar(t: NotifyEntry): string {
 
 export function getColoredIcon(
   t: NotifyEntry,
-  styler?: NotifyColorStyle,
+  styler?: (text: string) => string,
 ): string {
   const char = getIconChar(t);
   if (styler) return styler(char);
