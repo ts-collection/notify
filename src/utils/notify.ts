@@ -37,6 +37,7 @@ base.loading = (message: string, options?: NotifyOptions): NotifyHandle =>
 base.progress = (
   config: ProgressConfig,
   messages?: ProgressMessages & { loading?: string },
+  options?: NotifyOptions,
 ): ProgressHandle => {
   const loadingMsg = messages?.loading ?? 'Working...';
   const progress: ProgressInitOptions = {
@@ -45,8 +46,8 @@ base.progress = (
   };
   if (config.variant !== undefined) progress.variant = config.variant;
   if (config.display !== undefined) progress.display = config.display;
-  const id = manager.add('loading', loadingMsg, { progress });
-  return manager.progressHandle(id, config, messages);
+  const id = manager.add('loading', loadingMsg, { ...options, progress });
+  return manager.progressHandle(id, config, messages, options);
 };
 
 base.update = (id: string, update: NotifyUpdate) => manager.update(id, update);

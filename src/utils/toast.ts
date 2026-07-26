@@ -34,7 +34,8 @@ toast.loading = (msg: string, opts?: ToastOptions): NotifyHandle =>
 toast.progress = (
   config: ProgressConfig,
   messages?: ProgressMessages & { loading?: string },
-): ProgressHandle => notify.progress(config, messages);
+  opts?: ToastOptions,
+): ProgressHandle => notify.progress(config, messages, toToastOptions(opts));
 
 toast.update = (id: string, update: Parameters<typeof notify.update>[1]) =>
   notify.update(id, update);

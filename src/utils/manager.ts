@@ -216,6 +216,7 @@ export class NotifyManager {
     id: string,
     config: ProgressConfig,
     messages?: { success?: string; error?: string },
+    options?: NotifyOptions,
   ): ProgressHandle {
     let resolved = false;
     const hasTotal = config.total !== undefined;
@@ -223,11 +224,10 @@ export class NotifyManager {
     const resolve = (type: 'success' | 'error', msg?: string) => {
       const finalMsg =
         msg ?? (type === 'success' ? messages?.success : messages?.error);
-      if (finalMsg !== undefined) {
-        this.update(id, { type, message: finalMsg });
-      } else {
-        this.update(id, { type });
-      }
+      const update: NotifyUpdate = { type };
+      if (finalMsg !== undefined) update.message = finalMsg;
+      if (options) update.options = options;
+      this.update(id, update);
     };
 
     const checkResolve = (current: number) => {
