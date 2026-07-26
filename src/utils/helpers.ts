@@ -1,11 +1,16 @@
+import chalk from 'chalk';
 import type {
+  NotifyColorConfig,
+  NotifyColorInput,
+  NotifyColorStyle,
   NotifyEntry,
   NotifyOptions,
+  NotifyType,
   ProgressBarSet,
   ProgressInitOptions,
   ProgressVariant,
 } from '../types';
-import { color } from './colors';
+
 import { DEFAULT_TOAST_DURATION, SPINNER_FRAMES } from './constants';
 
 export function deriveLabel(
@@ -27,6 +32,47 @@ const PROGRESS_BARS: Record<
   line: { full: '━', empty: '─' },
   dot: { full: '●', empty: '○' },
 };
+
+// NOTE: resolve user color input to internal config
+export function resolveColor(
+  input: NotifyColorInput | undefined,
+): NotifyColorConfig {
+  if (!input) return { mode: 'all' } as NotifyColorConfig;
+
+  // Function — custom styler with 'all' mode
+  if (typeof input === 'function') {
+    return { mode: 'all', styler: input } as NotifyColorConfig;
+  }
+
+  // Object — optional mode + optional styler
+  const config: NotifyColorConfig = { mode: input.mode ?? 'all' };
+  if (input.color) config.styler = input.color;
+  return config;
+}
+
+// NOTE: wrap text in type-appropriate or custom color
+export function colorMessage(
+  type: NotifyType,
+  msg: string,
+  styler?: NotifyColorStyle,
+): string {
+  if (styler) return styler(msg);
+  switch (type) {
+    case 'success':
+      return chalk.green(msg);
+    case 'error':
+      return chalk.red(msg);
+    case 'warning':
+      return chalk.yellow(msg);
+    case 'info':
+      return chalk.cyan(msg);
+    case 'loading':
+    case 'progress':
+      return chalk.cyan(msg);
+    default:
+      return chalk.dim(msg);
+  }
+}
 
 export function formatProgress(progress: ProgressInitOptions): string {
   const { current, total, variant, display } = progress;
@@ -67,16 +113,32 @@ export function formatProgress(progress: ProgressInitOptions): string {
   return parts.join(' ');
 }
 
-export function getIcon(t: NotifyEntry) {
+export function getIconChar(t: NotifyEntry): string {
   if (t.type === 'progress' && t.progress?.display?.spinner === false)
-    return color.info('▸');
+    return '▸';
   if (t.type === 'loading' || t.type === 'progress')
-    return color.info(SPINNER_FRAMES[t.spinnerIndex % SPINNER_FRAMES.length]);
-  if (t.type === 'success') return color.success('√');
-  if (t.type === 'error') return color.error('×');
-  if (t.type === 'warning') return color.warn('▲');
-  if (t.type === 'info') return color.info('i');
-  return color.dim('●');
+    return SPINNER_FRAMES[t.spinnerIndex % SPINNER_FRAMES.length]!;
+  if (t.type === 'success') return '√';
+  if (t.type === 'error') return '×';
+  if (t.type === 'warning') return '▲';
+  if (t.type === 'info') return 'i';
+  return '●';
+}
+
+export function getColoredIcon(
+  t: NotifyEntry,
+  styler?: NotifyColorStyle,
+): string {
+  const char = getIconChar(t);
+  if (styler) return styler(char);
+  if (t.type === 'progress' && t.progress?.display?.spinner === false)
+    return chalk.cyan(char);
+  if (t.type === 'loading' || t.type === 'progress') return chalk.cyan(char);
+  if (t.type === 'success') return chalk.green(char);
+  if (t.type === 'error') return chalk.red(char);
+  if (t.type === 'warning') return chalk.yellow(char);
+  if (t.type === 'info') return chalk.cyan(char);
+  return chalk.dim(char);
 }
 
 export function resolveToast(toast: NotifyOptions['toast']) {

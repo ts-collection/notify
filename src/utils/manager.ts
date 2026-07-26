@@ -8,7 +8,14 @@ import type {
   ProgressHandle,
   ProgressInitOptions,
 } from '../types';
-import { formatProgress, getIcon, resolveToast } from './helpers';
+import {
+  colorMessage,
+  formatProgress,
+  getColoredIcon,
+  getIconChar,
+  resolveColor,
+  resolveToast,
+} from './helpers';
 import { RenderLoop } from './renderer';
 
 export class NotifyManager {
@@ -41,10 +48,21 @@ export class NotifyManager {
     }
 
     const lines = this.entries.map((t) => {
-      const progressSuffix = t.progress ? ` ${formatProgress(t.progress)}` : '';
-      const line = `${getIcon(t)} ${t.message}${progressSuffix}`;
+      const { mode, styler } = t.color;
+      const icon = `${
+        mode === 'all' || mode === 'icon-only'
+          ? getColoredIcon(t, styler)
+          : getIconChar(t)
+      } `;
+      const message =
+        mode === 'all' || mode === 'text-only'
+          ? colorMessage(t.type, t.message, styler)
+          : t.message;
+      const progressSuffix = t.progress
+        ? ` ${mode === 'all' || mode === 'text-only' ? colorMessage(t.type, formatProgress(t.progress), styler) : formatProgress(t.progress)}`
+        : '';
       if (t.type === 'loading' || t.type === 'progress') t.spinnerIndex++;
-      return line;
+      return `${icon}${message}${progressSuffix}`;
     });
 
     this.renderLoop.write(lines);
@@ -95,6 +113,7 @@ export class NotifyManager {
       persistent: !isToast,
       keepAlive: options.keepAlive ?? false,
       spinnerIndex: existing?.spinnerIndex ?? 0,
+      color: resolveColor(options.color),
     };
 
     if (options.progress) entry.progress = options.progress;
