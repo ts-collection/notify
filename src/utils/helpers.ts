@@ -1,5 +1,5 @@
 import type { ChalkInstance } from 'chalk';
-import chalk from 'chalk';
+import chalk, { modifierNames } from 'chalk';
 import type {
   NotifyColor,
   NotifyEntry,
@@ -69,8 +69,17 @@ export function resolveStyle(
   style: NotifyStyleOptions | undefined,
 ): ((text: string) => string) | undefined {
   if (!style) return undefined;
-  const { color, backgroundColor, modifier } = style;
-  if (!color && !backgroundColor && !modifier) return undefined;
+  const { color, backgroundColor, modifier, ...rest } = style;
+  const boolModifiers = rest as Partial<
+    Record<import('chalk').ModifierName, boolean>
+  >;
+  if (
+    !color &&
+    !backgroundColor &&
+    !modifier &&
+    !hasBoolModifier(boolModifiers)
+  )
+    return undefined;
 
   let styler: ChalkInstance = chalk;
 
@@ -84,19 +93,27 @@ export function resolveStyle(
     if (fn) styler = fn;
   }
 
+  // NOTE: apply named boolean modifiers first (bold: true, italic: true)
+  for (const [name, enabled] of Object.entries(boolModifiers)) {
+    if (enabled) {
+      const m = (styler as unknown as Record<string, ChalkInstance>)[name];
+      if (m) styler = m;
+    }
+  }
+
+  // NOTE: then apply ChalkInstance modifier(s)
   if (modifier) {
     const mods = Array.isArray(modifier) ? modifier : [modifier];
     for (const mod of mods) {
-      if (typeof mod === 'string') {
-        const m = (styler as unknown as Record<string, ChalkInstance>)[mod];
-        if (m) styler = m;
-      } else {
-        styler = mod;
-      }
+      styler = mod;
     }
   }
 
   return (text: string) => styler(text);
+}
+
+function hasBoolModifier(obj: Partial<Record<string, boolean>>): boolean {
+  return modifierNames.some((k) => obj[k] === true);
 }
 
 // NOTE: wrap text in type-appropriate or custom color

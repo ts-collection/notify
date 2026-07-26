@@ -40,8 +40,8 @@ export type NotifyStyleOptions = {
   color?: NotifyColor;
   // NOTE: we'll add bg manually
   backgroundColor?: NotifyColor;
-  modifier?: ModifierName | ModifierName[] | ChalkInstance | ChalkInstance[];
-};
+  modifier?: ChalkInstance | ChalkInstance[];
+} & Partial<Record<ModifierName, boolean>>;
 
 // NOTE: developer options
 export type NotifyOptions = {

@@ -222,15 +222,15 @@ describe('notify – style options', () => {
     expect(lastRender()).toMatch(/bg chalk/);
   });
 
-  it('single modifier applies to output', () => {
-    notify('bold text', { style: { modifier: 'bold' } });
+  it('boolean modifier applies to output', () => {
+    notify('bold text', { style: { bold: true } });
     tick();
     expect(hasAnsi(lastRaw())).toBe(true);
     expect(lastRender()).toMatch(/bold text/);
   });
 
-  it('array of modifiers applies to output', () => {
-    notify('bold+dim', { style: { modifier: ['bold', 'dim'] } });
+  it('multiple boolean modifiers apply to output', () => {
+    notify('bold+dim', { style: { bold: true, dim: true } });
     tick();
     expect(hasAnsi(lastRaw())).toBe(true);
     expect(lastRender()).toMatch(/bold\+dim/);
@@ -246,7 +246,7 @@ describe('notify – style options', () => {
   it('color + backgroundColor + modifier combined', () => {
     notify(
       'combo',
-      { style: { color: 'green', backgroundColor: 'bgBlack', modifier: ['bold', 'italic'] } },
+      { style: { color: 'green', backgroundColor: 'bgBlack', bold: true, italic: true } },
     );
     tick();
     expect(hasAnsi(lastRaw())).toBe(true);
@@ -254,7 +254,7 @@ describe('notify – style options', () => {
   });
 
   it('style can be applied to success type', () => {
-    notify.success('styled success', { style: { color: 'blue', modifier: 'bold' } });
+    notify.success('styled success', { style: { color: 'blue', bold: true } });
     tick();
     expect(hasAnsi(lastRaw())).toBe(true);
     expect(lastRender()).toMatch(/styled success/);
@@ -268,7 +268,7 @@ describe('notify – style options', () => {
   });
 
   it('style can be applied to warning type', () => {
-    notify.warning('styled warning', { style: { color: 'red', modifier: 'underline' } });
+    notify.warning('styled warning', { style: { color: 'red', underline: true } });
     tick();
     expect(hasAnsi(lastRaw())).toBe(true);
     expect(lastRender()).toMatch(/styled warning/);
@@ -294,7 +294,7 @@ describe('notify – style options', () => {
     notify.update(handle.id, {
       type: 'success',
       message: 'updated styled',
-      options: { style: { color: 'blue', modifier: 'bold' } },
+      options: { style: { color: 'blue', bold: true } },
     });
     tick();
     expect(hasAnsi(lastRaw())).toBe(true);
@@ -617,7 +617,7 @@ describe('edge cases', () => {
         success: 'styled done',
         error: 'fail',
       },
-      { style: { color: 'green', modifier: 'bold' } },
+      { style: { color: 'green', bold: true } },
     );
     tick();
     await handle.result;
@@ -637,7 +637,7 @@ describe('edge cases', () => {
 
   it('mixed styled and unstyled entries render together', () => {
     notify('plain');
-    notify.success('styled success', { style: { color: 'blue', modifier: 'bold' } });
+    notify.success('styled success', { style: { color: 'blue', bold: true } });
     tick();
 
     const text = lastRender();

@@ -38,11 +38,11 @@ notify.clear();                // remove all
 
 ## Style
 
-Every notification accepts a `style` option to control color, background, modifier, and mode.
+Every notification accepts a `style` option to control color, background, modifier flags, and mode.
 
 ```ts
 notify('Blue bold text', {
-  style: { color: 'blue', modifier: 'bold' },
+  style: { color: 'blue', bold: true },
 });
 
 notify('Custom hex color', {
@@ -50,15 +50,15 @@ notify('Custom hex color', {
 });
 
 notify('RGB color + underline', {
-  style: { color: 'rgb(255, 165, 0)', modifier: 'underline' },
+  style: { color: 'rgb(255, 165, 0)', underline: true },
 });
 
 notify('White on blue', {
-  style: { color: 'white', backgroundColor: 'blue', modifier: 'bold' },
+  style: { color: 'white', backgroundColor: 'blue', bold: true },
 });
 
 notify('Multiple modifiers', {
-  style: { modifier: ['bold', 'italic', 'underline'], color: 'cyan' },
+  style: { bold: true, italic: true, underline: true, color: 'cyan' },
 });
 ```
 
@@ -73,21 +73,13 @@ notify('Multiple modifiers', {
 
 > `backgroundColor` accepts the same formats — named colors like `'blue'` are automatically prefixed to `bgBlue`. You can also pass `chalk.bgRed`, `chalk.bgHex(...)`, etc.
 
-### Modifier
-
-| Type | Example |
-|------|---------|
-| Single name | `'bold'`, `'dim'`, `'italic'`, `'underline'`, `'strikethrough'` |
-| Multiple | `['bold', 'italic', 'underline']` |
-| ChalkInstance | `chalk.bold`, `chalk.italic` |
-
 ### Mode
 
 Controls which parts of the notification receive styling:
 
 ```ts
 notify('Only icon is colored', { style: { mode: 'icon-only', color: 'green' } });
-notify('Only text is colored', { style: { mode: 'text-only', color: 'magenta', modifier: 'bold' } });
+notify('Only text is colored', { style: { mode: 'text-only', color: 'magenta', bold: true } });
 notify('No ANSI at all', { style: { mode: 'none' } });
 ```
 
@@ -96,7 +88,7 @@ notify('No ANSI at all', { style: { mode: 'none' } });
 ```ts
 const { id } = notify.loading('Working…');
 notify.update(id, {
-  options: { style: { color: 'blue', modifier: 'bold' } },
+  options: { style: { color: 'blue', bold: true } },
 });
 ```
 
@@ -105,7 +97,7 @@ notify.update(id, {
 ```ts
 const bar = notify.progress({ total: 5 }, { loading: 'Styled progress' });
 notify.update(bar.id, {
-  options: { style: { color: 'cyan', modifier: 'bold' } },
+  options: { style: { color: 'cyan', bold: true } },
 });
 ```
 
@@ -117,7 +109,7 @@ await notify.promise(fetch('/api/data'), {
   success: 'Got it!',
   error: 'Failed',
 }, {
-  style: { color: 'blue', modifier: 'bold' },
+  style: { color: 'blue', bold: true },
 });
 ```
 
@@ -126,7 +118,7 @@ await notify.promise(fetch('/api/data'), {
 ```ts
 import { toast } from '@ts-utilities/notify';
 
-toast.success('Styled toast', { style: { color: 'green', modifier: 'bold' } });
+toast.success('Styled toast', { style: { color: 'green', bold: true } });
 toast('Auto-dismiss with style', { duration: 2000, style: { color: 'magenta' } });
 ```
 
@@ -193,6 +185,13 @@ notify.update(bar.id, {
   type: 'success',
   message: 'Upload completed',
 });
+
+// or
+// bar.done('Upload completed')
+
+// or 
+// const bar = notify.progress({ total: 100 }, { loading: 'Uploading', success: 'Upload Completed' });
+
 ```
 
 ## Promise
@@ -248,23 +247,8 @@ toast.clear();
 | `id` | `string` | auto | Custom notification id (replaces existing) |
 | `toast` | `boolean \| { duration: number }` | — | Makes entry auto-dismiss |
 | `keepAlive` | `boolean` | `false` | Keeps process alive until dismissed |
-| `style` | `NotifyStyleOptions` | — | Color, background, modifier, mode |
+| `style` | `NotifyStyleOptions` | — | Color, background, modifier flags |
 
-### NotifyStyleOptions
-
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `mode` | `'all' \| 'icon-only' \| 'text-only' \| 'none'` | `'all'` | Controls styling scope |
-| `color` | `ForegroundColorName \| CustomColor \| ChalkInstance` | — | Text/icon color |
-| `backgroundColor` | `ForegroundColorName \| CustomColor \| ChalkInstance` | — | Background color |
-| `modifier` | `ModifierName \| ModifierName[] \| ChalkInstance \| ChalkInstance[]` | — | Text modifiers (bold, italic, etc.) |
-
-### CustomColor
-
-| Format | Example |
-|--------|---------|
-| Hex | `'#ff0000'`, `'#0f0'` |
-| RGB | `'rgb(255, 0, 0)'`, `'rgb(100, 200, 50)'` |
 
 ## Types
 

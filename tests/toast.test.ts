@@ -145,7 +145,7 @@ describe('toast', () => {
   });
 
   it('forwards style option with modifier', () => {
-    toast.info('bold info', { style: { modifier: 'bold' } });
+    toast.info('bold info', { style: { bold: true } });
     tick();
     expect(lastRender()).toMatch(/bold info/);
   });
@@ -160,7 +160,7 @@ describe('toast', () => {
     notify('anchor');
     tick();
 
-    toast('styled transient', { duration: 500, style: { color: 'cyan', modifier: 'underline' } });
+    toast('styled transient', { duration: 500, style: { color: 'cyan', underline: true } });
     tick();
     expect(lastRender()).toMatch(/styled transient/);
 
