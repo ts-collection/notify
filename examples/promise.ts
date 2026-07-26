@@ -1,7 +1,7 @@
 import { notify } from '../src/index';
 import { sleep } from './helpers';
 
-const h1 = notify.promise(
+const h1 = await notify.promise(
   sleep(1500).then(() => ({ id: 1, name: 'example' })),
   {
     loading: 'Fetching user…',
@@ -9,7 +9,7 @@ const h1 = notify.promise(
     error: 'Failed',
   },
 );
-const data = await h1.result;
+const data = await h1;
 
 await sleep(400);
 

@@ -110,7 +110,7 @@ await notify.promise(fetch('/api/data'), {
   error: 'Failed',
 }, {
   style: { color: 'blue', bold: true },
-});
+}).catch(() => {});
 ```
 
 ### Style on toast
@@ -196,11 +196,9 @@ notify.update(bar.id, {
 
 ## Promise
 
-`notify.promise()` returns a **dual-awaitable handle** — you can `await` it two ways depending on whether you want to handle the error yourself or receive a safe `{ data, error }` tuple.
+`notify.promise()` returns a **thenable handle** that resolves to `T` directly. Rejects on error — wrap in try/catch.
 
-### Await the handle directly (safe — never throws)
-
-Returns a `ResolvedHandle` with `{ data, error }`. No try/catch needed.
+### Await the handle directly
 
 ```ts
 const handle = notify.promise(fetch('/api/data'), {
@@ -209,26 +207,19 @@ const handle = notify.promise(fetch('/api/data'), {
   error: 'Request failed',
 });
 
-const { data, error } = await handle;
-
-if (error) {
-  notify.error('Something went wrong');
-} else {
+try {
+  const data = await handle;
   notify.success(`Got ${data}`);
+} catch (err) {
+  notify.error('Request failed');
 }
 ```
 
-### Await `.result` (raw — promise rejects on error)
+### Await `.result` (identical to awaiting the handle)
 
-Get the resolved value directly. Throws if the promise rejects — wrap in try/catch.
+`await handle.result` is equivalent to `await handle` — both resolve to `T` or reject.
 
 ```ts
-const handle = notify.promise(fetch('/api/data'), {
-  loading: 'Fetching…',
-  success: 'Fetched!',
-  error: 'Request failed',
-});
-
 try {
   const data = await handle.result;
   notify.success(`Got ${data}`);
@@ -246,8 +237,12 @@ const handle = notify.promise(Promise.resolve(42), {
   finally: () => cleanup(),
 });
 
-// either style works with callbacks too
-const { data } = await handle;
+try {
+  const data = await handle;
+  notify.success(`Got ${data}`);
+} catch (err) {
+  notify.error('Request failed');
+}
 ```
 
 ### Function Labels
@@ -256,22 +251,16 @@ Pass an async function directly — the label is derived from the function name.
 
 ```ts
 async function fetchUser() { return 'Alice'; }
-const { data } = await notify.promise(fetchUser);
+try {
+  const data = await notify.promise(fetchUser);
+} catch {}
 ```
 
 ### `PromiseHandle<T>` type
 
 ```ts
-interface PromiseHandle<T> extends NotifyHandle, PromiseLike<ResolvedHandle<T>> {
-  /** Awaited directly: never rejects, returns { data, error } */
-  then: ...
-  /** Awaited manually: resolves to T, rejects on error */
+interface PromiseHandle<T> extends NotifyHandle, PromiseLike<T> {
   result: Promise<T>;
-}
-
-interface ResolvedHandle<T> extends NotifyHandle {
-  data: T | undefined;
-  error: unknown;
 }
 ```
 
@@ -342,7 +331,7 @@ Partially updates a notification.
 
 ### `notify.promise(promiseOrFn, messages?, options?)` → `PromiseHandle<T>`
 
-Returns a handle that acts as both a `PromiseLike<ResolvedHandle<T>>` (await directly for `{ data, error }`) and has a `.result` promise (await for raw value `T`, rejects on error).
+Returns a thenable handle — `await handle` and `await handle.result` both resolve to `T`. Rejects on error — wrap in try/catch.
 
 ### `notify.dismiss(id)`
 

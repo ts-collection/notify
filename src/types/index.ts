@@ -88,7 +88,7 @@ export type ResolvedHandle<T> = NotifyHandle & {
 
 export type PromiseHandle<T> = NotifyHandle & {
   result: Promise<T>;
-} & PromiseLike<ResolvedHandle<T>>;
+} & PromiseLike<T>;
 
 export type ProgressMessages = {
   success?: string;

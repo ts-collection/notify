@@ -8,7 +8,6 @@ import type {
   ProgressMessages,
   PromiseHandle,
   PromiseMessages,
-  ResolvedHandle,
 } from '../types';
 
 import { deriveLabel } from './helpers';
@@ -54,21 +53,21 @@ base.update = (id: string, update: NotifyUpdate) => manager.update(id, update);
 
 base.promise = <T>(
   promiseOrFn: Promise<T> | (() => Promise<T>),
-  messages: PromiseMessages<T> = {},
+  messages?: PromiseMessages<T>,
   options?: NotifyOptions,
 ): PromiseHandle<T> => {
-  const promise =
+  const targetPromise =
     typeof promiseOrFn === 'function' ? promiseOrFn() : promiseOrFn;
 
   const label = deriveLabel(promiseOrFn);
-  const loadingMsg = messages.loading ?? `${label}Loading...`;
+  const loadingMsg = messages?.loading ?? `${label}Loading...`;
 
   const id = manager.add('loading', loadingMsg, options);
   const handle = toHandle(id);
 
-  const result = promise
+  const result = targetPromise
     .then((data: T) => {
-      const rawSuccess = messages.success ?? `${label}Completed`;
+      const rawSuccess = messages?.success ?? `${label}Completed`;
       const successMessage =
         typeof rawSuccess === 'function' ? rawSuccess(data) : rawSuccess;
       manager.update(id, {
@@ -79,7 +78,7 @@ base.promise = <T>(
       return data;
     })
     .catch((err: unknown) => {
-      const rawError = messages.error ?? `${label}Failed`;
+      const rawError = messages?.error ?? `${label}Failed`;
       const errorMessage =
         typeof rawError === 'function' ? rawError(err) : rawError;
       manager.update(id, {
@@ -89,18 +88,12 @@ base.promise = <T>(
       });
       throw err;
     })
-    .finally(() => messages.finally?.());
-
-  // NOTE: never rejects — swallows the rethrow above into { data, error }
-  const settled$ = result.then(
-    (data): ResolvedHandle<T> => ({ ...handle, data, error: undefined }),
-    (error): ResolvedHandle<T> => ({ ...handle, data: undefined, error }),
-  );
+    .finally(() => messages?.finally?.());
 
   return {
     ...handle,
     result,
-    then: settled$.then.bind(settled$),
+    then: result.then.bind(result),
   };
 };
 
