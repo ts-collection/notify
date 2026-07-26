@@ -6,4 +6,4 @@ type RGBColor =
 
 type HexColor = `#${string}`;
 
-export type NotifyColor = HexColor | RGBColor;
+export type CustomColor = HexColor | RGBColor;

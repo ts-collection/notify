@@ -1,10 +1,5 @@
-import type {
-  BackgroundColorName,
-  ChalkInstance,
-  ForegroundColorName,
-  ModifierName,
-} from 'chalk';
-import type { NotifyColor } from './color';
+import type { ChalkInstance, ForegroundColorName, ModifierName } from 'chalk';
+import type { CustomColor } from './color';
 
 export type NotifyType =
   | 'default'
@@ -38,11 +33,13 @@ export type ProgressOptions = Pick<ProgressInitOptions, 'current' | 'total'>;
 
 export type ColorMode = 'icon-only' | 'text-only' | 'all' | 'none';
 
+export type NotifyColor = ForegroundColorName | CustomColor | ChalkInstance;
 // NOTE: resolved internal color config
 export type NotifyStyleOptions = {
   mode?: ColorMode;
-  color?: ForegroundColorName | NotifyColor | ChalkInstance;
-  backgroundColor?: BackgroundColorName | NotifyColor | ChalkInstance;
+  color?: NotifyColor;
+  // NOTE: we'll add bg manually
+  backgroundColor?: NotifyColor;
   modifier?: ModifierName | ModifierName[] | ChalkInstance | ChalkInstance[];
 };
 

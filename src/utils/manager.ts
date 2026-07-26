@@ -13,7 +13,7 @@ import {
   formatProgress,
   getColoredIcon,
   getIconChar,
-  resolveColor,
+  resolveStyle,
   resolveToast,
 } from './helpers';
 import { RenderLoop } from './renderer';
@@ -48,7 +48,8 @@ export class NotifyManager {
     }
 
     const lines = this.entries.map((t) => {
-      const { mode, styler } = t.color;
+      const styler = resolveStyle(t.style);
+      const mode = t.style?.mode ?? 'all';
       const icon = `${
         mode === 'all' || mode === 'icon-only'
           ? getColoredIcon(t, styler)
@@ -113,7 +114,7 @@ export class NotifyManager {
       persistent: !isToast,
       keepAlive: options.keepAlive ?? false,
       spinnerIndex: existing?.spinnerIndex ?? 0,
-      color: resolveColor(options.color),
+      style: options.style,
     };
 
     if (options.progress) entry.progress = options.progress;
