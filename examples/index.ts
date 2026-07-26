@@ -1,12 +1,12 @@
+/**
+ * Run all examples sequentially
+ *
+ * Run: bun run examples/index.ts
+ */
 import './basic';
 import './loading';
 import './toast';
-import './progress-legacy';
-import './progress-builder';
-import './progress-unknown-total';
+import './progress';
 import './promise';
 import './toast-promise';
 import './dismiss';
-import { notify } from '../src';
-
-notify.clear();

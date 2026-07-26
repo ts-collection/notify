@@ -135,8 +135,8 @@ describe('toast', () => {
     expect(lastRender()).toMatch(/done/);
   });
 
-  it('toast.progress.start returns a ProgressHandle', () => {
-    const bar = toast.progress.start({ total: 3 });
+  it('toast.progress returns a ProgressHandle', () => {
+    const bar = toast.progress({ total: 3 });
     expect(bar.advance).toBeInstanceOf(Function);
     expect(bar.set).toBeInstanceOf(Function);
     expect(bar.done).toBeInstanceOf(Function);

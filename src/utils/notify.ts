@@ -4,22 +4,11 @@ import type {
   NotifyUpdate,
   ProgressHandle,
   ProgressInitOptions,
-  ProgressStartConfig,
-  ProgressStartMessages,
+  ProgressConfig,
+  ProgressMessages,
   PromiseHandle,
   PromiseMessages,
 } from '../types';
-
-// NOTE: union of one-off progress fn and builder sub-methods
-type ProgressFn = ((
-  message: string,
-  options?: NotifyOptions & { progress?: ProgressInitOptions },
-) => NotifyHandle) & {
-  start: (
-    config: ProgressStartConfig,
-    messages?: ProgressStartMessages & { loading?: string },
-  ) => ProgressHandle;
-};
 
 import { deriveLabel } from './helpers';
 import { NotifyManager } from './manager';
@@ -45,27 +34,20 @@ base.info = (message: string, options?: NotifyOptions): NotifyHandle =>
 base.loading = (message: string, options?: NotifyOptions): NotifyHandle =>
   toHandle(manager.add('loading', message, options));
 
-const progressFn: ProgressFn = (
-  message: string,
-  options?: NotifyOptions & { progress?: ProgressInitOptions },
-): NotifyHandle => toHandle(manager.add('progress', message, options));
-
-progressFn.start = (
-  config: ProgressStartConfig,
-  messages?: ProgressStartMessages & { loading?: string },
+base.progress = (
+  config: ProgressConfig,
+  messages?: ProgressMessages & { loading?: string },
 ): ProgressHandle => {
   const loadingMsg = messages?.loading ?? 'Working...';
   const progress: ProgressInitOptions = {
     current: 0,
-    total: config.total,
+    ...(config.total !== undefined ? { total: config.total } : {}),
   };
   if (config.variant !== undefined) progress.variant = config.variant;
   if (config.display !== undefined) progress.display = config.display;
   const id = manager.add('loading', loadingMsg, { progress });
   return manager.progressHandle(id, config, messages);
 };
-
-base.progress = progressFn;
 
 base.update = (id: string, update: NotifyUpdate) => manager.update(id, update);
 

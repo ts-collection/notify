@@ -20,7 +20,6 @@ vi.useFakeTimers();
 import { notify } from '../src/utils/notify';
 
 // NOTE: helpers
-// NOTE: strip ANSI escape sequences
 function stripAnsi(s: string): string {
   return s.replace(/\u001b\[[0-9;]*m/g, '').trim();
 }
@@ -40,7 +39,7 @@ function lastRender(): string {
 beforeEach(() => {
   mockLogUpdate.mockClear();
   mockLogUpdateClear.mockClear();
-  vi.advanceTimersByTime(0); // clear any pending timers
+  vi.advanceTimersByTime(0);
   notify.clear();
   tick();
   mockLogUpdate.mockClear();
@@ -79,8 +78,6 @@ describe('notify – basic API', () => {
   it('replaces an existing entry when the same id is reused', () => {
     notify('first', { id: 'dup' });
     tick();
-
-    // same id – updates in place
     notify('second', { id: 'dup' });
     tick();
 
@@ -100,7 +97,6 @@ describe('notify.dismiss / notify.clear', () => {
     expect(lastRender()).toMatch(/stay/);
     expect(lastRender()).toMatch(/go/);
 
-    // dismiss using handle
     goHandle.dismiss();
     tick();
 
@@ -117,7 +113,6 @@ describe('notify.dismiss / notify.clear', () => {
 
     notify.clear();
 
-    // clear calls stopLoopIfIdle which calls logUpdate.clear()
     expect(mockLogUpdateClear).toHaveBeenCalled();
   });
 });
@@ -125,18 +120,15 @@ describe('notify.dismiss / notify.clear', () => {
 // NOTE: toast (auto-dismiss) behaviour
 describe('toast (auto-dismiss)', () => {
   it('toast: true auto-removes after default duration', () => {
-    // Add a persistent entry so the render loop stays active
     notify('persistent-context');
 
     notify('toast msg', { toast: true });
     tick();
     expect(lastRender()).toMatch(/toast msg/);
 
-    // Advance past the default duration (3000ms)
     vi.advanceTimersByTime(3001);
-    tick(); // render loop picks up the expiry
+    tick();
 
-    // The toast line should be gone; only the persistent line remains
     const text = lastRender();
     expect(text).not.toMatch(/toast msg/);
     expect(text).toMatch(/persistent-context/);
@@ -222,7 +214,6 @@ describe('notify.promise – defaults & name labeling', () => {
     tick();
     await handle.result;
     tick();
-    // success defaults to 'Completed'
     expect(lastRender()).toMatch(/Completed/);
   });
 
@@ -327,7 +318,6 @@ describe('edge cases', () => {
     tick();
 
     const text = lastRender();
-    // The last entry will be "msg 99" sorted by insertion order
     expect(text).toMatch(/msg 0/);
     expect(text).toMatch(/msg 99/);
   });
@@ -385,7 +375,6 @@ describe('edge cases', () => {
   });
 
   it('keepAlive refs the timer; without keepAlive the timer is unrefed', () => {
-    // Trigger interval creation with a non-keepAlive entry.
     notify('a');
     tick();
 
@@ -415,244 +404,8 @@ describe('edge cases', () => {
 
 // NOTE: progress
 describe('notify.progress', () => {
-  it('creates a progress notification and returns a handle', () => {
-    const handle = notify.progress('Uploading', {
-      progress: { current: 0, total: 500 },
-    });
-    expect(handle.id).toMatch(/^notify_\d+$/);
-  });
-
-  it('renders progress bar with percentage', () => {
-    notify.progress('Uploading files', {
-      progress: {
-        current: 200,
-        total: 500,
-        display: { percentage: true, brackets: true, count: true },
-      },
-    });
-    tick();
-    const text = lastRender();
-    expect(text).toMatch(/Uploading files/);
-    expect(text).toMatch(/40%/);
-    expect(text).toMatch(/\[/);
-    expect(text).toMatch(/\]/);
-  });
-
-  it('renders current count only when total is unknown', () => {
-    notify.progress('Processing', { progress: { current: 42 } });
-    tick();
-    const text = lastRender();
-    expect(text).toMatch(/Processing/);
-    expect(text).toMatch(/42/);
-    expect(text).not.toMatch(/%/);
-    expect(text).not.toMatch(/\//);
-    expect(text).not.toMatch(/\[/);
-  });
-
-  it('clamps percentage between 0 and 100', () => {
-    notify.progress('Overflow', {
-      progress: { current: 999, total: 100, display: { percentage: true } },
-    });
-    tick();
-    const text = lastRender();
-    // 999/100 = 999% but should be clamped at 100%
-    expect(text).toMatch(/100%/);
-  });
-
-  it('clamps at 0 for negative current', () => {
-    notify.progress('Underflow', {
-      progress: { current: -5, total: 100, display: { percentage: true } },
-    });
-    tick();
-    const text = lastRender();
-    expect(text).toMatch(/0%/);
-  });
-
-  it('persists beyond default toast duration', () => {
-    notify.progress('Long op', { progress: { current: 0, total: 10 } });
-    tick();
-
-    vi.advanceTimersByTime(10_000);
-    tick();
-
-    expect(lastRender()).toMatch(/Long op/);
-  });
-
-  it('progress notifications keep the render loop alive', () => {
-    notify.progress('Ongoing', { progress: { current: 5, total: 10 } });
-    tick();
-
-    // Should still render after arbitrary time
-    vi.advanceTimersByTime(5000);
-    tick();
-
-    expect(lastRender()).toMatch(/Ongoing/);
-  });
-
-  it('can be dismissed via handle', () => {
-    // Keep a persistent anchor so the render loop stays alive
-    notify('anchor');
-
-    const handle = notify.progress('Dismiss me', {
-      progress: { current: 3, total: 10 },
-    });
-    tick();
-    expect(lastRender()).toMatch(/Dismiss me/);
-
-    handle.dismiss();
-    tick();
-    expect(lastRender()).not.toMatch(/Dismiss me/);
-  });
-
-  it('updates with partial progress via handle.update', () => {
-    const handle = notify.progress('Uploading', {
-      progress: {
-        current: 0,
-        total: 100,
-        display: { percentage: true },
-      },
-    });
-    tick();
-    expect(lastRender()).toMatch(/0%/);
-
-    handle.update({
-      progress: { current: 75, total: 100 },
-    });
-    tick();
-
-    const text = lastRender();
-    expect(text).toMatch(/75%/);
-    expect(text).toMatch(/Uploading/);
-  });
-
-  it('updates with type and message via handle.update', () => {
-    const handle = notify.progress('Uploading files', {
-      progress: { current: 100, total: 100 },
-    });
-    tick();
-
-    handle.update({
-      type: 'success',
-      message: 'Upload completed',
-    });
-    tick();
-
-    const text = lastRender();
-    expect(text).toMatch(/Upload completed/);
-    // progress bar should be gone since we switched away from 'progress' type
-    expect(text).not.toMatch(/100%/);
-    expect(text).toMatch(/√/);
-  });
-
-  it('updates with progress AND type+message in same call', () => {
-    const handle = notify.progress('Processing', {
-      progress: {
-        current: 1,
-        total: 5,
-        display: { percentage: true },
-      },
-    });
-    tick();
-
-    handle.update({
-      type: 'progress',
-      message: 'Still processing…',
-      progress: { current: 3, total: 5 },
-    });
-    tick();
-
-    const text = lastRender();
-    expect(text).toMatch(/Still processing/);
-    expect(text).toMatch(/60%/);
-  });
-
-  it('update creates a new entry when id does not exist', () => {
-    const id = notify.update('nonexistent', {
-      type: 'progress',
-      message: 'Created via update',
-      progress: { current: 0, total: 10 },
-    });
-    tick();
-    expect(lastRender()).toMatch(/Created via update/);
-  });
-
-  it('progress shows spinning animation (spinnerIndex advances)', () => {
-    notify.progress('Spinning', { progress: { current: 0, total: 10 } });
-    tick();
-    const text1 = lastRender();
-    tick();
-    const text2 = lastRender();
-    // Spinner frames differ between ticks
-    expect(text1).not.toEqual(text2);
-  });
-
-  it('renders block variant with spaces as empty', () => {
-    notify.progress('Block', {
-      progress: {
-        current: 8,
-        total: 10,
-        variant: 'block',
-        display: { percentage: true, brackets: true },
-      },
-    });
-    tick();
-    const text = lastRender();
-    expect(text).toMatch(/80%/);
-    // block variant uses space for empty, so last chars should be spaces before ]
-    expect(text).toMatch(/\]/);
-  });
-
-  it('renders line variant', () => {
-    notify.progress('Line progress', {
-      progress: {
-        current: 4,
-        total: 5,
-        variant: 'line',
-        display: { percentage: true },
-      },
-    });
-    tick();
-    const text = lastRender();
-    expect(text).toMatch(/80%/);
-    expect(text).toMatch(/━/);
-  });
-
-  it('renders dot variant', () => {
-    notify.progress('Dot progress', {
-      progress: {
-        current: 3,
-        total: 5,
-        variant: 'dot',
-        display: { percentage: true },
-      },
-    });
-    tick();
-    const text = lastRender();
-    expect(text).toMatch(/60%/);
-    expect(text).toMatch(/●/);
-    expect(text).toMatch(/○/);
-  });
-
-  it('renders none variant (no bar, just percentage)', () => {
-    notify.progress('No bar', {
-      progress: {
-        current: 50,
-        total: 100,
-        variant: 'none',
-        display: { percentage: true },
-      },
-    });
-    tick();
-    const text = lastRender();
-    expect(text).toMatch(/50%/);
-    expect(text).not.toMatch(/\[/);
-  });
-});
-
-// NOTE: progress.start builder API
-describe('notify.progress.start builder', () => {
   it('returns a ProgressHandle with advance, set, done, fail, label', () => {
-    const bar = notify.progress.start({ total: 5 });
+    const bar = notify.progress({ total: 5 });
     expect(bar.id).toMatch(/^notify_\d+$/);
     expect(bar.advance).toBeInstanceOf(Function);
     expect(bar.set).toBeInstanceOf(Function);
@@ -663,7 +416,7 @@ describe('notify.progress.start builder', () => {
   });
 
   it('advance increments progress and auto-resolves on reaching total', () => {
-    const bar = notify.progress.start({ total: 4 });
+    const bar = notify.progress({ total: 4 });
     tick();
     expect(lastRender()).toMatch(/Working/);
     expect(lastRender()).toMatch(/0%/);
@@ -682,13 +435,12 @@ describe('notify.progress.start builder', () => {
 
     bar.advance();
     tick();
-    // auto-resolved to success
     expect(lastRender()).toMatch(/Working/);
     expect(lastRender()).not.toMatch(/%/);
   });
 
   it('advance auto-resolves with success message from config', () => {
-    const bar = notify.progress.start({ total: 2 }, { success: 'All done!' });
+    const bar = notify.progress({ total: 2 }, { success: 'All done!' });
     tick();
 
     bar.advance();
@@ -699,59 +451,245 @@ describe('notify.progress.start builder', () => {
   });
 
   it('set can jump to a specific value and auto-resolve', () => {
-    const bar = notify.progress.start({ total: 10 });
+    const bar = notify.progress({ total: 10 });
     bar.set(10);
     tick();
     expect(lastRender()).not.toMatch(/%/);
   });
 
   it('done manually marks as success with optional message', () => {
-    const bar = notify.progress.start({ total: 10 }, { success: 'Finished!' });
+    const bar = notify.progress({ total: 10 }, { success: 'Finished!' });
     bar.done('Custom done');
     tick();
     expect(lastRender()).toMatch(/Custom done/);
   });
 
   it('done falls back to config success message', () => {
-    const bar = notify.progress.start({ total: 10 }, { success: 'Finished!' });
+    const bar = notify.progress({ total: 10 }, { success: 'Finished!' });
     bar.done();
     tick();
     expect(lastRender()).toMatch(/Finished!/);
   });
 
   it('fail manually marks as error with optional message', () => {
-    const bar = notify.progress.start({ total: 10 }, { error: 'Oh no' });
+    const bar = notify.progress({ total: 10 }, { error: 'Oh no' });
     bar.fail('Something broke');
     tick();
     expect(lastRender()).toMatch(/Something broke/);
   });
 
   it('fail falls back to config error message', () => {
-    const bar = notify.progress.start({ total: 10 }, { error: 'Oh no' });
+    const bar = notify.progress({ total: 10 }, { error: 'Oh no' });
     bar.fail();
     tick();
     expect(lastRender()).toMatch(/Oh no/);
   });
 
   it('label updates the message', () => {
-    const bar = notify.progress.start({ total: 5 });
+    const bar = notify.progress({ total: 5 });
     bar.label('Step 2…');
     tick();
     expect(lastRender()).toMatch(/Step 2/);
   });
 
   it('handle.dismiss works on progress handle', () => {
-    const bar = notify.progress.start({ total: 5 });
+    const bar = notify.progress({ total: 5 });
     tick();
     expect(lastRender()).toMatch(/Working/);
     bar.dismiss();
-    // dismiss runs render() synchronously which calls logUpdate.clear()
     expect(mockLogUpdateClear).toHaveBeenCalled();
   });
 
   it('loading message can be customised', () => {
-    const bar = notify.progress.start({ total: 3 }, { loading: 'Uploading…' });
+    const bar = notify.progress({ total: 3 }, { loading: 'Uploading…' });
     tick();
     expect(lastRender()).toMatch(/Uploading/);
+  });
+
+  it('renders progress bar with percentage and brackets', () => {
+    const bar = notify.progress({
+      total: 500,
+      display: { percentage: true, brackets: true, count: true },
+    });
+    bar.set(200);
+    tick();
+    const text = lastRender();
+    expect(text).toMatch(/40%/);
+    expect(text).toMatch(/\[/);
+    expect(text).toMatch(/\]/);
+  });
+
+  it('renders current count only when total is unknown', () => {
+    notify.progress({}, { loading: 'Processing' });
+    tick();
+    const text = lastRender();
+    expect(text).toMatch(/Processing/);
+    expect(text).toMatch(/0/);
+    expect(text).not.toMatch(/%/);
+    expect(text).not.toMatch(/\//);
+    expect(text).not.toMatch(/\[/);
+  });
+
+  it('clamps percentage between 0 and 100', () => {
+    const bar = notify.progress({ total: 100, display: { percentage: true } });
+    // NOTE: handle.update doesn't auto-resolve — safe to test overflow
+    bar.update({
+      type: 'progress',
+      progress: { current: 999, total: 100 },
+    });
+    tick();
+    expect(lastRender()).toMatch(/100%/);
+  });
+
+  it('starts at 0 percent when no advance', () => {
+    notify.progress({ total: 100, display: { percentage: true } });
+    tick();
+    expect(lastRender()).toMatch(/0%/);
+  });
+
+  it('persists beyond default toast duration', () => {
+    notify.progress({ total: 10 });
+    tick();
+
+    vi.advanceTimersByTime(10_000);
+    tick();
+
+    expect(lastRender()).toMatch(/Working/);
+  });
+
+  it('progress notifications keep the render loop alive', () => {
+    notify.progress({ total: 10 });
+    tick();
+
+    vi.advanceTimersByTime(5000);
+    tick();
+
+    expect(lastRender()).toMatch(/Working/);
+  });
+
+  it('can be dismissed via handle', () => {
+    notify('anchor');
+
+    const handle = notify.progress({ total: 10 });
+    tick();
+    expect(lastRender()).toMatch(/Working/);
+
+    handle.dismiss();
+    tick();
+    expect(lastRender()).not.toMatch(/Working/);
+  });
+
+  it('updates with partial progress via handle.update', () => {
+    const handle = notify.progress({
+      total: 100,
+      display: { percentage: true },
+    });
+    tick();
+    expect(lastRender()).toMatch(/0%/);
+
+    handle.update({
+      progress: { current: 75, total: 100 },
+    });
+    tick();
+
+    expect(lastRender()).toMatch(/75%/);
+  });
+
+  it('updates with type and message via handle.update', () => {
+    const handle = notify.progress({ total: 100 });
+    tick();
+
+    handle.update({
+      type: 'success',
+      message: 'Upload completed',
+    });
+    tick();
+
+    expect(lastRender()).toMatch(/Upload completed/);
+    expect(lastRender()).toMatch(/√/);
+  });
+
+  it('updates with progress AND type+message in same call', () => {
+    const handle = notify.progress({
+      total: 5,
+      display: { percentage: true },
+    });
+    handle.update({
+      type: 'progress',
+      message: 'Still processing…',
+      progress: { current: 3, total: 5 },
+    });
+    tick();
+
+    expect(lastRender()).toMatch(/Still processing/);
+    expect(lastRender()).toMatch(/60%/);
+  });
+
+  it('update creates a new entry when id does not exist', () => {
+    notify.update('nonexistent', {
+      type: 'progress',
+      message: 'Created via update',
+      progress: { current: 0, total: 10 },
+    });
+    tick();
+    expect(lastRender()).toMatch(/Created via update/);
+  });
+
+  it('progress shows spinning animation (spinnerIndex advances)', () => {
+    notify.progress({ total: 10 });
+    tick();
+    const text1 = lastRender();
+    tick();
+    const text2 = lastRender();
+    expect(text1).not.toEqual(text2);
+  });
+
+  it('renders block variant with spaces as empty', () => {
+    const bar = notify.progress({
+      total: 10,
+      variant: 'block',
+      display: { percentage: true, brackets: true },
+    });
+    bar.set(8);
+    tick();
+    expect(lastRender()).toMatch(/80%/);
+    expect(lastRender()).toMatch(/\]/);
+  });
+
+  it('renders line variant', () => {
+    const bar = notify.progress({
+      total: 5,
+      variant: 'line',
+      display: { percentage: true },
+    });
+    bar.set(4);
+    tick();
+    expect(lastRender()).toMatch(/80%/);
+    expect(lastRender()).toMatch(/━/);
+  });
+
+  it('renders dot variant', () => {
+    const bar = notify.progress({
+      total: 5,
+      variant: 'dot',
+      display: { percentage: true },
+    });
+    bar.set(3);
+    tick();
+    expect(lastRender()).toMatch(/60%/);
+    expect(lastRender()).toMatch(/●/);
+    expect(lastRender()).toMatch(/○/);
+  });
+
+  it('renders none variant (no bar, just percentage)', () => {
+    const bar = notify.progress({
+      total: 100,
+      variant: 'none',
+      display: { percentage: true },
+    });
+    bar.set(50);
+    tick();
+    expect(lastRender()).toMatch(/50%/);
+    expect(lastRender()).not.toMatch(/\[/);
   });
 });

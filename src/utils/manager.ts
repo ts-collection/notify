@@ -4,6 +4,7 @@ import type {
   NotifyOptions,
   NotifyType,
   NotifyUpdate,
+  ProgressConfig,
   ProgressHandle,
   ProgressInitOptions,
 } from '../types';
@@ -189,10 +190,11 @@ export class NotifyManager {
 
   progressHandle(
     id: string,
-    config: { total: number },
+    config: ProgressConfig,
     messages?: { success?: string; error?: string },
   ): ProgressHandle {
     let resolved = false;
+    const hasTotal = config.total !== undefined;
 
     const resolve = (type: 'success' | 'error', msg?: string) => {
       const finalMsg =
@@ -204,6 +206,13 @@ export class NotifyManager {
       }
     };
 
+    const checkResolve = (current: number) => {
+      if (hasTotal && current >= config.total!) {
+        resolved = true;
+        resolve('success');
+      }
+    };
+
     return {
       id,
       dismiss: () => this.dismiss(id),
@@ -212,20 +221,21 @@ export class NotifyManager {
         if (resolved) return;
         const entry = this.entries.find((e) => e.id === id);
         const current = (entry?.progress?.current ?? 0) + n;
-        this.update(id, { progress: { current, total: config.total } });
-        // NOTE: auto-resolve when current reaches or exceeds total
-        if (current >= config.total) {
-          resolved = true;
-          resolve('success');
+        if (hasTotal) {
+          this.update(id, { progress: { current, total: config.total! } });
+        } else {
+          this.update(id, { progress: { current } });
         }
+        checkResolve(current);
       },
       set: (current: number) => {
         if (resolved) return;
-        this.update(id, { progress: { current, total: config.total } });
-        if (current >= config.total) {
-          resolved = true;
-          resolve('success');
+        if (hasTotal) {
+          this.update(id, { progress: { current, total: config.total! } });
+        } else {
+          this.update(id, { progress: { current } });
         }
+        checkResolve(current);
       },
       done: (msg?: string) => {
         resolved = true;

@@ -69,13 +69,13 @@ export type PromiseHandle<T> = NotifyHandle & {
   result: Promise<T>;
 };
 
-export type ProgressStartMessages = {
+export type ProgressMessages = {
   success?: string;
   error?: string;
 };
 
-export type ProgressStartConfig = {
-  total: number;
+export type ProgressConfig = {
+  total?: number;
   variant?: ProgressVariant;
   display?: Partial<{
     spinner: boolean;
