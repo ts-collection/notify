@@ -1,8 +1,11 @@
 import { createLogUpdate } from 'log-update';
 import type {
   NotifyEntry,
+  NotifyHandle,
   NotifyOptions,
   NotifyType,
+  NotifyUpdate,
+  ProgressHandle,
   ProgressInitOptions,
   ProgressOptions,
 } from '../types';
@@ -211,5 +214,78 @@ export class NotifyManager {
       this.logUpdate.clear();
     }
     this.stopLoop();
+  }
+
+  /** Create a NotifyHandle for a given entry id */
+  handle(id: string): NotifyHandle {
+    return {
+      id,
+      dismiss: () => this.dismiss(id),
+      update: (update: NotifyUpdate) => this.update(id, update),
+    };
+  }
+
+  /** Create a ProgressHandle for a given entry id */
+  progressHandle(
+    id: string,
+    config: { total: number },
+    messages?: { success?: string; error?: string },
+  ): ProgressHandle {
+    let resolved = false;
+
+    return {
+      id,
+      dismiss: () => this.dismiss(id),
+      update: (update: NotifyUpdate) => this.update(id, update),
+      advance: (n = 1) => {
+        if (resolved) return;
+        const entry = this.entries.find((e) => e.id === id);
+        const current = (entry?.progress?.current ?? 0) + n;
+        this.update(id, { progress: { current, total: config.total } });
+        if (current >= config.total) {
+          resolved = true;
+          const doneMsg = messages?.success ?? entry?.message;
+          if (doneMsg !== undefined) {
+            this.update(id, { type: 'success', message: doneMsg });
+          } else {
+            this.update(id, { type: 'success' });
+          }
+        }
+      },
+      set: (current: number) => {
+        if (resolved) return;
+        this.update(id, { progress: { current, total: config.total } });
+        if (current >= config.total) {
+          resolved = true;
+          const doneMsg = messages?.success ?? this.entries.find((e) => e.id === id)?.message;
+          if (doneMsg !== undefined) {
+            this.update(id, { type: 'success', message: doneMsg });
+          } else {
+            this.update(id, { type: 'success' });
+          }
+        }
+      },
+      done: (msg?: string) => {
+        resolved = true;
+        const finalMsg = msg ?? messages?.success;
+        if (finalMsg !== undefined) {
+          this.update(id, { type: 'success', message: finalMsg });
+        } else {
+          this.update(id, { type: 'success' });
+        }
+      },
+      fail: (msg?: string) => {
+        resolved = true;
+        const finalMsg = msg ?? messages?.error;
+        if (finalMsg !== undefined) {
+          this.update(id, { type: 'error', message: finalMsg });
+        } else {
+          this.update(id, { type: 'error' });
+        }
+      },
+      label: (msg: string) => {
+        this.update(id, { message: msg });
+      },
+    };
   }
 }

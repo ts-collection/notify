@@ -47,10 +47,11 @@ afterEach(() => {
 });
 
 describe('toast', () => {
-  it('delegates to notify with toast: true', () => {
-    const id = toast('hello');
+  it('delegates to notify with toast: true and returns a handle', () => {
+    const handle = toast('hello');
     tick();
-    expect(id).toMatch(/^notify_\d+$/);
+    expect(handle.id).toMatch(/^notify_\d+$/);
+    expect(handle.dismiss).toBeInstanceOf(Function);
     expect(lastRender()).toMatch(/hello/);
   });
 
@@ -81,15 +82,25 @@ describe('toast', () => {
     expect(lastRender()).toMatch(/working/);
   });
 
-  it('dismiss and clear work', () => {
+  it('handle.dismiss works', () => {
     toast('hold');
-    const id = toast('bye');
+    const handle = toast('bye');
     tick();
     expect(lastRender()).toMatch(/bye/);
 
-    toast.dismiss(id);
+    handle.dismiss();
     tick();
     expect(lastRender()).not.toMatch(/bye/);
+  });
+
+  it('clear removes all entries and clears the log update', () => {
+    toast('a');
+    toast('b');
+    tick();
+    expect(mockLogUpdate.mock.calls.length).toBeGreaterThan(0);
+
+    toast.clear();
+    expect(mockLogUpdateClear).toHaveBeenCalled();
   });
 
   it('auto-dismisses after default duration', () => {
@@ -109,5 +120,27 @@ describe('toast', () => {
     const text = lastRender();
     expect(text).not.toMatch(/transient/);
     expect(text).toMatch(/anchor/);
+  });
+
+  it('toast.promise returns a PromiseHandle with .result', async () => {
+    const handle = toast.promise(Promise.resolve(42), {
+      loading: '…',
+      success: 'done',
+      error: 'fail',
+    });
+    tick();
+    const data = await handle.result;
+    tick();
+    expect(data).toBe(42);
+    expect(lastRender()).toMatch(/done/);
+  });
+
+  it('toast.progress.start returns a ProgressHandle', () => {
+    const bar = toast.progress.start({ total: 3 });
+    expect(bar.advance).toBeInstanceOf(Function);
+    expect(bar.set).toBeInstanceOf(Function);
+    expect(bar.done).toBeInstanceOf(Function);
+    expect(bar.fail).toBeInstanceOf(Function);
+    expect(bar.label).toBeInstanceOf(Function);
   });
 });

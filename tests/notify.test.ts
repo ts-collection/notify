@@ -62,9 +62,11 @@ afterEach(() => {
 // notify – basic add / convenience methods
 // ============================================================================
 describe('notify – basic API', () => {
-  it('notify(message) creates a default entry and returns an id', () => {
-    const id = notify('hello');
-    expect(id).toMatch(/^notify_\d+$/);
+  it('notify(message) returns a handle with id', () => {
+    const handle = notify('hello');
+    expect(handle.id).toMatch(/^notify_\d+$/);
+    expect(handle.dismiss).toBeInstanceOf(Function);
+    expect(handle.update).toBeInstanceOf(Function);
   });
 
   it.each([
@@ -72,15 +74,15 @@ describe('notify – basic API', () => {
     ['error', 'failed'],
     ['warning', 'caution'],
     ['info', 'note'],
-  ] as const)('notify.%s() creates the correct type', (method, msg) => {
-    const fn = notify[method] as (m: string) => string;
-    const id = fn(msg);
-    expect(id).toMatch(/^notify_\d+$/);
+  ] as const)('notify.%s() returns a handle with correct id', (method, msg) => {
+    const fn = notify[method] as (m: string) => { id: string };
+    const handle = fn(msg);
+    expect(handle.id).toMatch(/^notify_\d+$/);
   });
 
-  it('returns the custom id when provided', () => {
-    const id = notify('msg', { id: 'my-custom-id' });
-    expect(id).toBe('my-custom-id');
+  it('returns the custom id in the handle when provided', () => {
+    const handle = notify('msg', { id: 'my-custom-id' });
+    expect(handle.id).toBe('my-custom-id');
   });
 
   it('replaces an existing entry when the same id is reused', () => {
@@ -101,16 +103,16 @@ describe('notify – basic API', () => {
 // notify.dismiss / notify.clear
 // ============================================================================
 describe('notify.dismiss / notify.clear', () => {
-  it('dismiss removes a single entry', () => {
+  it('handle.dismiss removes a single entry', () => {
     notify('stay');
-    const goId = notify('go');
+    const goHandle = notify('go');
     tick();
 
     expect(lastRender()).toMatch(/stay/);
     expect(lastRender()).toMatch(/go/);
 
-    // dismiss the 'go' entry using its id
-    notify.dismiss(goId);
+    // dismiss using handle
+    goHandle.dismiss();
     tick();
 
     const text = lastRender();
@@ -194,22 +196,25 @@ describe('toast (auto-dismiss)', () => {
 // ============================================================================
 describe('notify.promise – defaults & name labeling', () => {
   it('uses defaults when messages is empty', async () => {
-    const p = Promise.resolve('ok');
-    await notify.promise(p);
+    const handle = notify.promise(Promise.resolve('ok'));
+    tick();
+    await handle.result;
     tick();
     expect(lastRender()).toMatch(/Completed/);
   });
 
   it('uses defaults when messages is undefined', async () => {
-    const p = Promise.resolve('ok');
-    await notify.promise(p, undefined);
+    const handle = notify.promise(Promise.resolve('ok'), undefined);
+    tick();
+    await handle.result;
     tick();
     expect(lastRender()).toMatch(/Completed/);
   });
 
   it('default error message on reject', async () => {
-    const p = Promise.reject(new Error('crash'));
-    await expect(notify.promise(p)).rejects.toThrow('crash');
+    const handle = notify.promise(Promise.reject(new Error('crash')));
+    tick();
+    await expect(handle.result).rejects.toThrow('crash');
     tick();
     expect(lastRender()).toMatch(/Failed/);
   });
@@ -218,34 +223,40 @@ describe('notify.promise – defaults & name labeling', () => {
     async function fetchData() {
       return 'data';
     }
-    await notify.promise(fetchData);
+    const handle = notify.promise(fetchData);
+    tick();
+    await handle.result;
     tick();
     expect(lastRender()).toMatch(/fetchData/);
   });
 
   it('partial messages override only specified fields', async () => {
-    await notify.promise(Promise.resolve('ok'), {
+    const handle = notify.promise(Promise.resolve('ok'), {
       loading: 'custom loading',
     });
     tick();
-    // loading msg seen before tick, then success defaults to 'Completed'
+    await handle.result;
+    tick();
+    // success defaults to 'Completed'
     expect(lastRender()).toMatch(/Completed/);
   });
 
   it('success callback still works with default fallback', async () => {
-    await notify.promise(Promise.resolve(42), {
+    const handle = notify.promise(Promise.resolve(42), {
       success: (n: number) => `got ${n}`,
     });
+    tick();
+    await handle.result;
     tick();
     expect(lastRender()).toMatch(/got 42/);
   });
 
   it('error callback still works with default fallback', async () => {
-    await expect(
-      notify.promise(Promise.reject(new Error('fail')), {
-        error: (e: unknown) => `err: ${(e as Error).message}`,
-      }),
-    ).rejects.toThrow('fail');
+    const handle = notify.promise(Promise.reject(new Error('fail')), {
+      error: (e: unknown) => `err: ${(e as Error).message}`,
+    });
+    tick();
+    await expect(handle.result).rejects.toThrow('fail');
     tick();
     expect(lastRender()).toMatch(/err: fail/);
   });
@@ -256,16 +267,14 @@ describe('notify.promise – defaults & name labeling', () => {
 // ============================================================================
 describe('notify.promise', () => {
   it('resolves and shows success message from string', async () => {
-    const p = Promise.resolve(42);
-    const resultPromise = notify.promise(p, {
+    const handle = notify.promise(Promise.resolve(42), {
       loading: 'fetching…',
       success: 'fetched!',
       error: 'failed',
     });
 
-    // The promise resolves via microtask; we must await first so the update
-    // (manager.update) runs, THEN tick to trigger the render interval.
-    const result = await resultPromise;
+    tick();
+    const result = await handle.result;
     tick();
 
     expect(result).toBe(42);
@@ -273,14 +282,14 @@ describe('notify.promise', () => {
   });
 
   it('resolves and shows success message from callback', async () => {
-    const p = Promise.resolve('data');
-    const resultPromise = notify.promise(p, {
+    const handle = notify.promise(Promise.resolve('data'), {
       loading: 'loading…',
       success: (data: string) => `got ${data}`,
       error: 'failed',
     });
 
-    const result = await resultPromise;
+    tick();
+    const result = await handle.result;
     tick();
 
     expect(result).toBe('data');
@@ -289,14 +298,14 @@ describe('notify.promise', () => {
 
   it('rejects and shows error message from string', async () => {
     const err = new Error('boom');
-    const p = Promise.reject(err);
-    const resultPromise = notify.promise(p, {
+    const handle = notify.promise(Promise.reject(err), {
       loading: 'processing…',
       success: 'done',
       error: 'something went wrong',
     });
 
-    await expect(resultPromise).rejects.toThrow('boom');
+    tick();
+    await expect(handle.result).rejects.toThrow('boom');
     tick();
 
     expect(lastRender()).toMatch(/something went wrong/);
@@ -304,14 +313,14 @@ describe('notify.promise', () => {
 
   it('rejects and shows error message from callback', async () => {
     const err = new Error('kaboom');
-    const p = Promise.reject(err);
-    const resultPromise = notify.promise(p, {
+    const handle = notify.promise(Promise.reject(err), {
       loading: 'calculating…',
       success: 'done',
       error: (e: unknown) => `oops: ${(e as Error).message}`,
     });
 
-    await expect(resultPromise).rejects.toThrow('kaboom');
+    tick();
+    await expect(handle.result).rejects.toThrow('kaboom');
     tick();
 
     expect(lastRender()).toMatch(/oops: kaboom/);
@@ -338,107 +347,87 @@ describe('edge cases', () => {
 
     const text = lastRender();
     // The last entry will be "msg 99" sorted by insertion order
-    // but entries without a custom id get sequential ids
     expect(text).toMatch(/msg 0/);
     expect(text).toMatch(/msg 99/);
   });
 
   it('accepts a thunk (lazy promise) and resolves', async () => {
-    const p = notify.promise(
-      () => Promise.resolve(99),
-      {
-        loading: 'lazy…',
-        success: 'got it',
-        error: 'nope',
-      },
-    );
+    const handle = notify.promise(() => Promise.resolve(99), {
+      loading: 'lazy…',
+      success: 'got it',
+      error: 'nope',
+    });
     tick();
-    await expect(p).resolves.toBe(99);
+    await expect(handle.result).resolves.toBe(99);
     tick();
     expect(lastRender()).toMatch(/got it/);
   });
 
   it('accepts a thunk that rejects', async () => {
-    const p = notify.promise(
-      () => Promise.reject(new Error('nope')),
-      {
-        loading: 'lazy…',
-        success: 'done',
-        error: 'thunk failed',
-      },
-    );
+    const handle = notify.promise(() => Promise.reject(new Error('nope')), {
+      loading: 'lazy…',
+      success: 'done',
+      error: 'thunk failed',
+    });
     tick();
-    await expect(p).rejects.toThrow('nope');
+    await expect(handle.result).rejects.toThrow('nope');
     tick();
     expect(lastRender()).toMatch(/thunk failed/);
   });
 
   it('calls finally callback on resolve', async () => {
     const fn = vi.fn();
-    await notify.promise(
-      Promise.resolve('ok'),
-      {
-        loading: '…',
-        success: 'done',
-        error: 'fail',
-        finally: fn,
-      },
-    );
+    const handle = notify.promise(Promise.resolve('ok'), {
+      loading: '…',
+      success: 'done',
+      error: 'fail',
+      finally: fn,
+    });
+    tick();
+    await handle.result;
     tick();
     expect(fn).toHaveBeenCalledOnce();
   });
 
   it('calls finally callback on reject', async () => {
     const fn = vi.fn();
-    await expect(
-      notify.promise(
-        Promise.reject(new Error('boom')),
-        {
-          loading: '…',
-          success: 'done',
-          error: 'fail',
-          finally: fn,
-        },
-      ),
-    ).rejects.toThrow('boom');
+    const handle = notify.promise(Promise.reject(new Error('boom')), {
+      loading: '…',
+      success: 'done',
+      error: 'fail',
+      finally: fn,
+    });
+    tick();
+    await expect(handle.result).rejects.toThrow('boom');
     tick();
     expect(fn).toHaveBeenCalledOnce();
   });
 
   it('keepAlive refs the timer; without keepAlive the timer is unrefed', () => {
-    // After the first notify() call an internal setInterval is created.
-    // With vi.useFakeTimers the return value has ref/unref as no-ops;
-    // we can verify that the code path calls them by spying once on the
-    // prototype after the interval already exists.
-
     // Trigger interval creation with a non-keepAlive entry.
     notify('a');
     tick();
 
-    // The interval is created; grab one reference then spy ref/unref.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const timers: any = (globalThis as any).__fakeTimers;
-    // If fake timers support inspection, find the active interval.
-    // Otherwise just verify the code path doesn't throw — keepAlive is
-    // a Node.js process-exit concern, not easily observable in fake timers.
     expect(() => {
-      const id = notify('keep-me', { keepAlive: true });
+      const handle = notify('keep-me', { keepAlive: true });
       tick();
-      notify.dismiss(id);
+      handle.dismiss();
       tick();
     }).not.toThrow();
   });
 
   it('promise forwards keepAlive option', async () => {
-    expect(() =>
-      notify.promise(Promise.resolve('ok'), {
+    const handle = notify.promise(
+      Promise.resolve('ok'),
+      {
         loading: '…',
         success: 'done',
         error: 'fail',
-      }, { keepAlive: true }),
-    ).not.toThrow();
+      },
+      { keepAlive: true },
+    );
     tick();
-    await Promise.resolve();
+    await handle.result;
     tick();
   });
 });
@@ -447,11 +436,11 @@ describe('edge cases', () => {
 // notify.progress
 // ============================================================================
 describe('notify.progress', () => {
-  it('creates a progress notification and returns an id', () => {
-    const id = notify.progress('Uploading', {
+  it('creates a progress notification and returns a handle', () => {
+    const handle = notify.progress('Uploading', {
       progress: { current: 0, total: 500 },
     });
-    expect(id).toMatch(/^notify_\d+$/);
+    expect(handle.id).toMatch(/^notify_\d+$/);
   });
 
   it('renders progress bar with percentage', () => {
@@ -521,23 +510,23 @@ describe('notify.progress', () => {
     expect(lastRender()).toMatch(/Ongoing/);
   });
 
-  it('can be dismissed', () => {
+  it('can be dismissed via handle', () => {
     // Keep a persistent anchor so the render loop stays alive
     notify('anchor');
 
-    const id = notify.progress('Dismiss me', {
+    const handle = notify.progress('Dismiss me', {
       progress: { current: 3, total: 10 },
     });
     tick();
     expect(lastRender()).toMatch(/Dismiss me/);
 
-    notify.dismiss(id);
+    handle.dismiss();
     tick();
     expect(lastRender()).not.toMatch(/Dismiss me/);
   });
 
-  it('updates with partial progress via notify.update', () => {
-    const id = notify.progress('Uploading', {
+  it('updates with partial progress via handle.update', () => {
+    const handle = notify.progress('Uploading', {
       progress: {
         current: 0,
         total: 100,
@@ -547,7 +536,7 @@ describe('notify.progress', () => {
     tick();
     expect(lastRender()).toMatch(/0%/);
 
-    notify.update(id, {
+    handle.update({
       progress: { current: 75, total: 100 },
     });
     tick();
@@ -557,13 +546,13 @@ describe('notify.progress', () => {
     expect(text).toMatch(/Uploading/);
   });
 
-  it('updates with type and message via notify.update', () => {
-    const id = notify.progress('Uploading files', {
+  it('updates with type and message via handle.update', () => {
+    const handle = notify.progress('Uploading files', {
       progress: { current: 100, total: 100 },
     });
     tick();
 
-    notify.update(id, {
+    handle.update({
       type: 'success',
       message: 'Upload completed',
     });
@@ -577,7 +566,7 @@ describe('notify.progress', () => {
   });
 
   it('updates with progress AND type+message in same call', () => {
-    const id = notify.progress('Processing', {
+    const handle = notify.progress('Processing', {
       progress: {
         current: 1,
         total: 5,
@@ -586,7 +575,7 @@ describe('notify.progress', () => {
     });
     tick();
 
-    notify.update(id, {
+    handle.update({
       type: 'progress',
       message: 'Still processing…',
       progress: { current: 3, total: 5 },
@@ -681,3 +670,111 @@ describe('notify.progress', () => {
   });
 });
 
+// ============================================================================
+// notify.progress.start builder API
+// ============================================================================
+describe('notify.progress.start builder', () => {
+  it('returns a ProgressHandle with advance, set, done, fail, label', () => {
+    const bar = notify.progress.start({ total: 5 });
+    expect(bar.id).toMatch(/^notify_\d+$/);
+    expect(bar.advance).toBeInstanceOf(Function);
+    expect(bar.set).toBeInstanceOf(Function);
+    expect(bar.done).toBeInstanceOf(Function);
+    expect(bar.fail).toBeInstanceOf(Function);
+    expect(bar.label).toBeInstanceOf(Function);
+    expect(bar.dismiss).toBeInstanceOf(Function);
+  });
+
+  it('advance increments progress and auto-resolves on reaching total', () => {
+    const bar = notify.progress.start({ total: 4 });
+    tick();
+    expect(lastRender()).toMatch(/Working/);
+    expect(lastRender()).toMatch(/0%/);
+
+    bar.advance();
+    tick();
+    expect(lastRender()).toMatch(/25%/);
+
+    bar.advance();
+    tick();
+    expect(lastRender()).toMatch(/50%/);
+
+    bar.advance();
+    tick();
+    expect(lastRender()).toMatch(/75%/);
+
+    bar.advance();
+    tick();
+    // auto-resolved to success
+    expect(lastRender()).toMatch(/Working/);
+    expect(lastRender()).not.toMatch(/%/);
+  });
+
+  it('advance auto-resolves with success message from config', () => {
+    const bar = notify.progress.start({ total: 2 }, { success: 'All done!' });
+    tick();
+
+    bar.advance();
+    bar.advance();
+    tick();
+
+    expect(lastRender()).toMatch(/All done!/);
+  });
+
+  it('set can jump to a specific value and auto-resolve', () => {
+    const bar = notify.progress.start({ total: 10 });
+    bar.set(10);
+    tick();
+    expect(lastRender()).not.toMatch(/%/);
+  });
+
+  it('done manually marks as success with optional message', () => {
+    const bar = notify.progress.start({ total: 10 }, { success: 'Finished!' });
+    bar.done('Custom done');
+    tick();
+    expect(lastRender()).toMatch(/Custom done/);
+  });
+
+  it('done falls back to config success message', () => {
+    const bar = notify.progress.start({ total: 10 }, { success: 'Finished!' });
+    bar.done();
+    tick();
+    expect(lastRender()).toMatch(/Finished!/);
+  });
+
+  it('fail manually marks as error with optional message', () => {
+    const bar = notify.progress.start({ total: 10 }, { error: 'Oh no' });
+    bar.fail('Something broke');
+    tick();
+    expect(lastRender()).toMatch(/Something broke/);
+  });
+
+  it('fail falls back to config error message', () => {
+    const bar = notify.progress.start({ total: 10 }, { error: 'Oh no' });
+    bar.fail();
+    tick();
+    expect(lastRender()).toMatch(/Oh no/);
+  });
+
+  it('label updates the message', () => {
+    const bar = notify.progress.start({ total: 5 });
+    bar.label('Step 2…');
+    tick();
+    expect(lastRender()).toMatch(/Step 2/);
+  });
+
+  it('handle.dismiss works on progress handle', () => {
+    const bar = notify.progress.start({ total: 5 });
+    tick();
+    expect(lastRender()).toMatch(/Working/);
+    bar.dismiss();
+    // dismiss runs render() synchronously which calls logUpdate.clear()
+    expect(mockLogUpdateClear).toHaveBeenCalled();
+  });
+
+  it('loading message can be customised', () => {
+    const bar = notify.progress.start({ total: 3 }, { loading: 'Uploading…' });
+    tick();
+    expect(lastRender()).toMatch(/Uploading/);
+  });
+});
