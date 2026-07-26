@@ -1,6 +1,6 @@
+import chalk from 'chalk';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// NOTE: mock log-update before importing notify; vi.mock is hoisted so shared vars use vi.hoisted()
 const { mockLogUpdate, mockLogUpdateClear } = vi.hoisted(() => {
   const logUpdate = vi.fn();
   const clear = vi.fn();
@@ -8,32 +8,33 @@ const { mockLogUpdate, mockLogUpdateClear } = vi.hoisted(() => {
 });
 
 vi.mock('log-update', () => ({
-  createLogUpdate: () => {
-    const fn = Object.assign(mockLogUpdate, { clear: mockLogUpdateClear });
-    return fn;
-  },
+  createLogUpdate: () => Object.assign(mockLogUpdate, { clear: mockLogUpdateClear }),
 }));
 
-// NOTE: fake timers to control the internal 80ms render interval
 vi.useFakeTimers();
 
 import { notify } from '../src/utils/notify';
 
-// NOTE: helpers
 function stripAnsi(s: string): string {
   return s.replace(/\u001b\[[0-9;]*m/g, '').trim();
 }
 
-// NOTE: advance past render interval so pending renders fire
 function tick(): void {
   vi.advanceTimersByTime(80);
 }
 
-// NOTE: last rendered output (plain text, no ANSI)
-function lastRender(): string {
+function lastRaw(): string {
   const calls = mockLogUpdate.mock.calls;
   if (calls.length === 0) return '';
-  return stripAnsi(calls[calls.length - 1][0]);
+  return String(calls[calls.length - 1][0] ?? '');
+}
+
+function lastRender(): string {
+  return stripAnsi(lastRaw());
+}
+
+function hasAnsi(s: string): boolean {
+  return /\u001b\[[0-9;]*m/.test(s);
 }
 
 beforeEach(() => {
@@ -50,7 +51,6 @@ afterEach(() => {
   notify.clear();
 });
 
-// NOTE: basic add / convenience methods
 describe('notify – basic API', () => {
   it('notify(message) returns a handle with id', () => {
     const handle = notify('hello');
@@ -87,7 +87,6 @@ describe('notify – basic API', () => {
   });
 });
 
-// NOTE: dismiss / clear
 describe('notify.dismiss / notify.clear', () => {
   it('handle.dismiss removes a single entry', () => {
     notify('stay');
@@ -117,7 +116,219 @@ describe('notify.dismiss / notify.clear', () => {
   });
 });
 
-// NOTE: toast (auto-dismiss) behaviour
+describe('notify – style options', () => {
+  it('default style applies type-based coloring', () => {
+    notify.success('ok');
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/ok/);
+  });
+
+  it('style: undefined falls back to type-based coloring', () => {
+    notify('msg', { style: undefined });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/msg/);
+  });
+
+  it('mode: none strips all ANSI from icon and text', () => {
+    notify.success('hidden color', { style: { mode: 'none' } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(false);
+    expect(lastRender()).toMatch(/hidden color/);
+  });
+
+  it('mode: icon-only colors the icon but not the text', () => {
+    const raw = () => {
+      notify('plain', { style: { mode: 'icon-only' } });
+      tick();
+      return lastRaw();
+    };
+    const output = raw();
+    expect(hasAnsi(output)).toBe(true);
+  });
+
+  it('mode: text-only colors the message but not the icon', () => {
+    const output = (() => {
+      notify('colored text', { style: { mode: 'text-only' } });
+      tick();
+      return lastRaw();
+    })();
+    expect(hasAnsi(output)).toBe(true);
+  });
+
+  it('mode: all colors both icon and text', () => {
+    const output = (() => {
+      notify.success('both', { style: { mode: 'all' } });
+      tick();
+      return lastRaw();
+    })();
+    expect(hasAnsi(output)).toBe(true);
+  });
+
+  it('named foreground color applies chalk color', () => {
+    notify('blue msg', { style: { color: 'blue' } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/blue msg/);
+  });
+
+  it('hex foreground color applies correctly', () => {
+    notify('hex colored', { style: { color: '#ff0000' } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/hex colored/);
+  });
+
+  it('rgb foreground color applies correctly', () => {
+    notify('rgb colored', { style: { color: 'rgb(255,0,0)' } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/rgb colored/);
+  });
+
+  it('chalk instance as color applies correctly', () => {
+    notify('chalk colored', { style: { color: chalk.magenta } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/chalk colored/);
+  });
+
+  it('backgroundColor applies bg-prefixed chalk color', () => {
+    notify('bg', { style: { backgroundColor: 'blue' } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/bg/);
+  });
+
+  it('hex backgroundColor applies correctly', () => {
+    notify('bg hex', { style: { backgroundColor: '#ff0000' } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/bg hex/);
+  });
+
+  it('rgb backgroundColor applies correctly', () => {
+    notify('bg rgb', { style: { backgroundColor: 'rgb(255,0,0)' } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/bg rgb/);
+  });
+
+  it('chalk instance as backgroundColor applies correctly', () => {
+    notify('bg chalk', { style: { backgroundColor: chalk.bgYellow } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/bg chalk/);
+  });
+
+  it('single modifier applies to output', () => {
+    notify('bold text', { style: { modifier: 'bold' } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/bold text/);
+  });
+
+  it('array of modifiers applies to output', () => {
+    notify('bold+dim', { style: { modifier: ['bold', 'dim'] } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/bold\+dim/);
+  });
+
+  it('chalk instance as modifier applies to output', () => {
+    notify('italic', { style: { modifier: chalk.italic } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/italic/);
+  });
+
+  it('color + backgroundColor + modifier combined', () => {
+    notify(
+      'combo',
+      { style: { color: 'green', backgroundColor: 'bgBlack', modifier: ['bold', 'italic'] } },
+    );
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/combo/);
+  });
+
+  it('style can be applied to success type', () => {
+    notify.success('styled success', { style: { color: 'blue', modifier: 'bold' } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/styled success/);
+  });
+
+  it('style can be applied to error type', () => {
+    notify.error('styled error', { style: { color: 'yellow' } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/styled error/);
+  });
+
+  it('style can be applied to warning type', () => {
+    notify.warning('styled warning', { style: { color: 'red', modifier: 'underline' } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/styled warning/);
+  });
+
+  it('style can be applied to info type', () => {
+    notify.info('styled info', { style: { color: 'magenta' } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/styled info/);
+  });
+
+  it('style can be applied to loading type', () => {
+    notify.loading('styled loading', { style: { color: 'green' } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/styled loading/);
+  });
+
+  it('style can be applied via update', () => {
+    const handle = notify('start');
+    tick();
+    notify.update(handle.id, {
+      type: 'success',
+      message: 'updated styled',
+      options: { style: { color: 'blue', modifier: 'bold' } },
+    });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/updated styled/);
+  });
+
+  it('update changes style option on existing entry', () => {
+    const handle = notify('plain', { style: { mode: 'none' } });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(false);
+
+    notify.update(handle.id, {
+      message: 'now styled',
+      options: { style: { color: 'red' } },
+    });
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/now styled/);
+  });
+
+  it('different modes produce visually distinct output for same message', () => {
+    notify('test', { style: { mode: 'none' } });
+    tick();
+    const noneRaw = lastRaw();
+
+    notify.clear();
+    notify('test', { style: { mode: 'all' } });
+    tick();
+    const allRaw = lastRaw();
+
+    expect(noneRaw).not.toBe(allRaw);
+  });
+});
+
 describe('toast (auto-dismiss)', () => {
   it('toast: true auto-removes after default duration', () => {
     notify('persistent-context');
@@ -170,7 +381,6 @@ describe('toast (auto-dismiss)', () => {
   });
 });
 
-// NOTE: promise default messages / name labeling
 describe('notify.promise – defaults & name labeling', () => {
   it('uses defaults when messages is empty', async () => {
     const handle = notify.promise(Promise.resolve('ok'));
@@ -238,7 +448,6 @@ describe('notify.promise – defaults & name labeling', () => {
   });
 });
 
-// NOTE: promise
 describe('notify.promise', () => {
   it('resolves and shows success message from string', async () => {
     const handle = notify.promise(Promise.resolve(42), {
@@ -301,7 +510,6 @@ describe('notify.promise', () => {
   });
 });
 
-// NOTE: edge cases
 describe('edge cases', () => {
   it('clearing when already empty does not throw', () => {
     expect(() => notify.clear()).not.toThrow();
@@ -400,9 +608,44 @@ describe('edge cases', () => {
     await handle.result;
     tick();
   });
+
+  it('promise forwards style option', async () => {
+    const handle = notify.promise(
+      Promise.resolve('styled'),
+      {
+        loading: 'working…',
+        success: 'styled done',
+        error: 'fail',
+      },
+      { style: { color: 'green', modifier: 'bold' } },
+    );
+    tick();
+    await handle.result;
+    tick();
+    expect(hasAnsi(lastRaw())).toBe(true);
+    expect(lastRender()).toMatch(/styled done/);
+  });
+
+  it('update on non-existent id creates entry with fallback defaults', () => {
+    notify.update('ghost', {
+      type: 'info',
+      message: 'spawned from update',
+    });
+    tick();
+    expect(lastRender()).toMatch(/spawned from update/);
+  });
+
+  it('mixed styled and unstyled entries render together', () => {
+    notify('plain');
+    notify.success('styled success', { style: { color: 'blue', modifier: 'bold' } });
+    tick();
+
+    const text = lastRender();
+    expect(text).toMatch(/plain/);
+    expect(text).toMatch(/styled success/);
+  });
 });
 
-// NOTE: progress
 describe('notify.progress', () => {
   it('returns a ProgressHandle with advance, set, done, fail, label', () => {
     const bar = notify.progress({ total: 5 });
@@ -532,7 +775,6 @@ describe('notify.progress', () => {
 
   it('clamps percentage between 0 and 100', () => {
     const bar = notify.progress({ total: 100, display: { percentage: true } });
-    // NOTE: handle.update doesn't auto-resolve — safe to test overflow
     bar.update({
       type: 'progress',
       progress: { current: 999, total: 100 },

@@ -182,6 +182,10 @@ export class NotifyManager {
       entry.keepAlive = update.options.keepAlive;
     }
 
+    if (update.options?.style !== undefined) {
+      entry.style = update.options.style;
+    }
+
     if (update.type === 'loading') {
       entry.spinnerIndex = 0;
     }

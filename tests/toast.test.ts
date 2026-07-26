@@ -7,18 +7,11 @@ const { mockLogUpdate, mockLogUpdateClear } = vi.hoisted(() => {
 });
 
 vi.mock('log-update', () => ({
-  createLogUpdate: () =>
-    Object.assign(mockLogUpdate, { clear: mockLogUpdateClear }),
+  createLogUpdate: () => Object.assign(mockLogUpdate, { clear: mockLogUpdateClear }),
 }));
 
 vi.useFakeTimers({
-  toFake: [
-    'Date',
-    'setTimeout',
-    'clearTimeout',
-    'setInterval',
-    'clearInterval',
-  ],
+  toFake: ['Date', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'],
 });
 
 import { notify } from '../src/utils/notify';
@@ -28,10 +21,14 @@ function tick() {
   vi.advanceTimersByTime(80);
 }
 
-function lastRender(): string {
+function lastRaw(): string {
   const calls = mockLogUpdate.mock.calls;
   if (calls.length === 0) return '';
-  return calls[calls.length - 1][0].replace(/\u001b\[[0-9;]*m/g, '').trim();
+  return String(calls[calls.length - 1][0] ?? '');
+}
+
+function lastRender(): string {
+  return lastRaw().replace(/\u001b\[[0-9;]*m/g, '').trim();
 }
 
 beforeEach(() => {
@@ -104,16 +101,13 @@ describe('toast', () => {
   });
 
   it('auto-dismisses after default duration', () => {
-    // Add a persistent entry so the loop stays alive
     notify('anchor');
     tick();
 
-    // Add a toast
     toast('transient');
     tick();
     expect(lastRender()).toMatch(/transient/);
 
-    // Advance well past 3000ms
     vi.advanceTimersByTime(3100);
     tick();
 
@@ -142,5 +136,42 @@ describe('toast', () => {
     expect(bar.done).toBeInstanceOf(Function);
     expect(bar.fail).toBeInstanceOf(Function);
     expect(bar.label).toBeInstanceOf(Function);
+  });
+
+  it('forwards style option with named color', () => {
+    toast.success('styled success', { style: { color: 'blue' } });
+    tick();
+    expect(lastRender()).toMatch(/styled success/);
+  });
+
+  it('forwards style option with modifier', () => {
+    toast.info('bold info', { style: { modifier: 'bold' } });
+    tick();
+    expect(lastRender()).toMatch(/bold info/);
+  });
+
+  it('forwards style option with mode: none', () => {
+    toast('plain toast', { style: { mode: 'none' } });
+    tick();
+    expect(lastRender()).toMatch(/plain toast/);
+  });
+
+  it('styled toast auto-dismisses correctly', () => {
+    notify('anchor');
+    tick();
+
+    toast('styled transient', { duration: 500, style: { color: 'cyan', modifier: 'underline' } });
+    tick();
+    expect(lastRender()).toMatch(/styled transient/);
+
+    vi.advanceTimersByTime(600);
+    tick();
+    expect(lastRender()).not.toMatch(/styled transient/);
+  });
+
+  it('custom duration toast passes style to wrapped notify call', () => {
+    toast.info('colored toast', { duration: 2000, style: { color: 'magenta' } });
+    tick();
+    expect(lastRender()).toMatch(/colored toast/);
   });
 });

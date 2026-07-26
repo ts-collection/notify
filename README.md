@@ -36,19 +36,108 @@ notify.dismiss(id);            // remove one
 notify.clear();                // remove all
 ```
 
-## Progress
+## Style
 
-Create progress notifications with animated bars:
+Every notification accepts a `style` option to control color, background, modifier, and mode.
 
 ```ts
-const id = notify.progress('Uploading files', {
-  progress: { current: 0, total: 500 },
+notify('Blue bold text', {
+  style: { color: 'blue', modifier: 'bold' },
 });
-// → ⠋ Uploading files [████████████████████░░░░░░░░░░] 67% (334/500)
 
-notify.update(id, {
-  progress: { current: 334, total: 500 },
+notify('Custom hex color', {
+  style: { color: '#ff4500' },
 });
+
+notify('RGB color + underline', {
+  style: { color: 'rgb(255, 165, 0)', modifier: 'underline' },
+});
+
+notify('White on blue', {
+  style: { color: 'white', backgroundColor: 'blue', modifier: 'bold' },
+});
+
+notify('Multiple modifiers', {
+  style: { modifier: ['bold', 'italic', 'underline'], color: 'cyan' },
+});
+```
+
+### Color
+
+| Type | Example |
+|------|---------|
+| Named chalk | `'red'`, `'green'`, `'blue'`, `'cyan'`, `'magenta'`, `'yellow'`, `'white'`, `'gray'`, `'black'` |
+| Hex | `'#ff0000'`, `'#0f0'` |
+| RGB | `'rgb(255, 0, 0)'`, `'rgb(100, 200, 50)'` |
+| ChalkInstance | `chalk.hex('#f0f')`, `chalk.rgb(255, 0, 255)` |
+
+> `backgroundColor` accepts the same formats — named colors like `'blue'` are automatically prefixed to `bgBlue`. You can also pass `chalk.bgRed`, `chalk.bgHex(...)`, etc.
+
+### Modifier
+
+| Type | Example |
+|------|---------|
+| Single name | `'bold'`, `'dim'`, `'italic'`, `'underline'`, `'strikethrough'` |
+| Multiple | `['bold', 'italic', 'underline']` |
+| ChalkInstance | `chalk.bold`, `chalk.italic` |
+
+### Mode
+
+Controls which parts of the notification receive styling:
+
+```ts
+notify('Only icon is colored', { style: { mode: 'icon-only', color: 'green' } });
+notify('Only text is colored', { style: { mode: 'text-only', color: 'magenta', modifier: 'bold' } });
+notify('No ANSI at all', { style: { mode: 'none' } });
+```
+
+### Dynamic style via update
+
+```ts
+const { id } = notify.loading('Working…');
+notify.update(id, {
+  options: { style: { color: 'blue', modifier: 'bold' } },
+});
+```
+
+### Style on progress notifications
+
+```ts
+const bar = notify.progress({ total: 5 }, { loading: 'Styled progress' });
+notify.update(bar.id, {
+  options: { style: { color: 'cyan', modifier: 'bold' } },
+});
+```
+
+### Style on promise notifications
+
+```ts
+await notify.promise(fetch('/api/data'), {
+  loading: 'Fetching…',
+  success: 'Got it!',
+  error: 'Failed',
+}, {
+  style: { color: 'blue', modifier: 'bold' },
+});
+```
+
+### Style on toast
+
+```ts
+import { toast } from '@ts-utilities/notify';
+
+toast.success('Styled toast', { style: { color: 'green', modifier: 'bold' } });
+toast('Auto-dismiss with style', { duration: 2000, style: { color: 'magenta' } });
+```
+
+## Progress
+
+```ts
+const bar = notify.progress({ total: 15 });
+for (let i = 0; i < 15; i++) {
+  await sleep(100);
+  bar.advance();
+}
 ```
 
 ### Display Toggles
@@ -56,15 +145,10 @@ notify.update(id, {
 All display options are enabled by default. Disable any of them:
 
 ```ts
-notify.progress('Downloading', {
-  progress: {
-    current: 0,
-    total: 100,
-    spinner: false,   // static ▸ icon instead of animated spinner
-    percentage: false, // hide percentage
-    suffix: false,     // hide (current/total)
-  },
-});
+notify.progress({
+  total: 100,
+  display: { spinner: false, percentage: false, count: false },
+}, { loading: 'Downloading' });
 ```
 
 ### Bar Variants
@@ -78,22 +162,19 @@ notify.progress('Downloading', {
 | `none` | — | — | `80% (400/500)` |
 
 ```ts
-notify.progress('Tasks', {
-  progress: { current: 4, total: 5, variant: 'dot' },
-});
+notify.progress({ total: 5, variant: 'dot' }, { loading: 'Tasks' });
 ```
 
 Variant is set-once — `notify.update` cannot change it.
 
 ### Unknown Total
 
-When `total` is omitted, just the count is shown:
-
 ```ts
-notify.progress('Processing', {
-  progress: { current: 42 }, // no total
-});
-// → ⠋ Processing 42
+const bar = notify.progress({}, { loading: 'Processing' });
+
+bar.advance();        // → 1
+bar.advance();        // → 2
+bar.set(42);          // → 42
 ```
 
 ## Update
@@ -101,25 +182,20 @@ notify.progress('Processing', {
 Partial update — only specified fields are merged:
 
 ```ts
-const id = notify.progress('Uploading', {
-  progress: { current: 0, total: 100 },
-});
+const bar = notify.progress({ total: 100 }, { loading: 'Uploading' });
 
-notify.update(id, {
+notify.update(bar.id, {
   progress: { current: 75 },
   message: 'Still uploading…',
 });
 
-notify.update(id, {
+notify.update(bar.id, {
   type: 'success',
   message: 'Upload completed',
 });
-// Progress resets when switching away from `progress` type
 ```
 
 ## Promise
-
-Tracks a promise through loading → success/error:
 
 ```ts
 await notify.promise(fetch('/api/data'), {
@@ -141,13 +217,9 @@ await notify.promise(Promise.resolve(42), {
 
 ### Function Labels
 
-Named functions get auto-prefixed defaults:
-
 ```ts
 async function fetchUser() { return 'Alice'; }
 await notify.promise(fetchUser);
-// loading → "fetchUser: Loading..."
-// success → "fetchUser: Completed"
 ```
 
 ## Toast (auto-dismiss)
@@ -176,39 +248,63 @@ toast.clear();
 | `id` | `string` | auto | Custom notification id (replaces existing) |
 | `toast` | `boolean \| { duration: number }` | — | Makes entry auto-dismiss |
 | `keepAlive` | `boolean` | `false` | Keeps process alive until dismissed |
+| `style` | `NotifyStyleOptions` | — | Color, background, modifier, mode |
+
+### NotifyStyleOptions
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `mode` | `'all' \| 'icon-only' \| 'text-only' \| 'none'` | `'all'` | Controls styling scope |
+| `color` | `ForegroundColorName \| CustomColor \| ChalkInstance` | — | Text/icon color |
+| `backgroundColor` | `ForegroundColorName \| CustomColor \| ChalkInstance` | — | Background color |
+| `modifier` | `ModifierName \| ModifierName[] \| ChalkInstance \| ChalkInstance[]` | — | Text modifiers (bold, italic, etc.) |
+
+### CustomColor
+
+| Format | Example |
+|--------|---------|
+| Hex | `'#ff0000'`, `'#0f0'` |
+| RGB | `'rgb(255, 0, 0)'`, `'rgb(100, 200, 50)'` |
 
 ## Types
 
 ```ts
-import type { NotifyEntry, NotifyOptions, NotifyType, ProgressOptions, ProgressVariant, PromiseMessages } from '@ts-utilities/notify';
+import type {
+  NotifyEntry,
+  NotifyOptions,
+  NotifyStyleOptions,
+  ColorMode,
+  NotifyColor,
+  NotifyType,
+  NotifyHandle,
+  ProgressOptions,
+  ProgressHandle,
+  ProgressVariant,
+  ProgressConfig,
+  PromiseMessages,
+  PromiseHandle,
+} from '@ts-utilities/notify';
 ```
 
 ## API
 
-### `notify(message, options?)` → `string`
+### `notify(message, options?)` → `NotifyHandle`
 
-Creates a default notification. Returns the id.
+Creates a default notification. Returns a handle with `id`, `dismiss()`, and `update()`.
 
-### `notify.{success|error|warning|info|loading}(message, options?)` → `string`
+### `notify.{success|error|warning|info|loading}(message, options?)` → `NotifyHandle`
 
-### `notify.progress(message, options?)` → `string`
+### `notify.progress(config, messages?)` → `ProgressHandle`
 
-Creates a persistent animated progress notification.
+Creates a persistent animated progress notification. Returns a handle with `advance()`, `set()`, `done()`, `fail()`, `label()`, `dismiss()`, and `update()`.
 
 ### `notify.update(id, update)`
 
-Partially updates a notification:
+Partially updates a notification.
 
-```ts
-notify.update(id, {
-  type?: NotifyType;
-  message?: string;
-  progress?: { current: number; total?: number };
-  options?: NotifyOptions;
-});
-```
+### `notify.promise(promiseOrFn, messages?, options?)` → `PromiseHandle<T>`
 
-### `notify.promise(promiseOrFn, messages?, options?)` → `Promise<T>`
+Returns a handle with a `.result` promise.
 
 ### `notify.dismiss(id)`
 
