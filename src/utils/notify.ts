@@ -1,14 +1,13 @@
 import type {
   NotifyHandle,
   NotifyOptions,
-  NotifyType,
+  NotifyUpdate,
   ProgressHandle,
   ProgressInitOptions,
-  ProgressOptions,
-  PromiseHandle,
-  PromiseMessages,
   ProgressStartConfig,
   ProgressStartMessages,
+  PromiseHandle,
+  PromiseMessages,
 } from '../types';
 
 // NOTE: union of one-off progress fn and builder sub-methods
@@ -68,15 +67,7 @@ progressFn.start = (
 
 base.progress = progressFn;
 
-base.update = (
-  id: string,
-  update: {
-    type?: NotifyType;
-    message?: string;
-    progress?: ProgressOptions;
-    options?: NotifyOptions;
-  },
-) => manager.update(id, update);
+base.update = (id: string, update: NotifyUpdate) => manager.update(id, update);
 
 base.promise = <T>(
   promiseOrFn: Promise<T> | (() => Promise<T>),

@@ -62,6 +62,19 @@ export class NotifyManager {
     }
   }
 
+  // NOTE: derive persistence and toast config from type
+  private persistConfig(
+    type: NotifyType,
+    toastOption?: NotifyOptions['toast'],
+  ) {
+    const persistent = type === 'loading' || type === 'progress';
+    if (persistent) {
+      return { persistent, isToast: false, duration: Number.POSITIVE_INFINITY };
+    }
+    const { isToast, duration } = resolveToast(toastOption);
+    return { persistent, isToast, duration };
+  }
+
   add(
     type: NotifyType,
     message: string,
@@ -70,10 +83,7 @@ export class NotifyManager {
     const id = options.id ?? this.nextId();
     const existing = this.entries.find((t) => t.id === id);
 
-    const isPersistent = type === 'loading' || type === 'progress';
-    const { isToast, duration } = isPersistent
-      ? { isToast: false, duration: Number.POSITIVE_INFINITY }
-      : resolveToast(options.toast);
+    const { isToast, duration } = this.persistConfig(type, options.toast);
 
     const entry: NotifyEntry = {
       id,
@@ -98,17 +108,18 @@ export class NotifyManager {
     const entry = this.entries.find((t) => t.id === id);
     if (!entry) {
       // NOTE: create-on-miss when updating a non-existent id
-      return this.add(
-        update.type ?? 'default',
-        update.message ?? '',
-        {
-          ...update.options,
-          id,
-          ...(update.progress
-            ? { progress: { ...update.progress, display: {} } as ProgressInitOptions }
-            : {}),
-        },
-      );
+      return this.add(update.type ?? 'default', update.message ?? '', {
+        ...update.options,
+        id,
+        ...(update.progress
+          ? {
+              progress: {
+                ...update.progress,
+                display: {},
+              } as ProgressInitOptions,
+            }
+          : {}),
+      });
     }
 
     if (update.type !== undefined) {
@@ -116,15 +127,16 @@ export class NotifyManager {
       // NOTE: clear progress when switching away from progress type
       if (update.type !== 'progress') delete entry.progress;
 
-      const isPersistent = update.type === 'loading' || update.type === 'progress';
-      const { isToast, duration } = isPersistent
-        ? { isToast: false, duration: Number.POSITIVE_INFINITY }
-        : resolveToast(
-            update.options?.toast ??
-              (entry.persistent ? undefined : { duration: entry.duration }),
-          );
+      const { isToast, duration } = this.persistConfig(
+        update.type,
+        update.options?.toast ??
+          (entry.persistent ? undefined : { duration: entry.duration }),
+      );
       entry.duration = duration;
-      entry.persistent = !isToast || !update.options?.toast ? isPersistent : false;
+      entry.persistent =
+        !isToast || !update.options?.toast
+          ? update.type === 'loading' || update.type === 'progress'
+          : false;
     }
 
     if (update.message !== undefined) {
@@ -137,7 +149,9 @@ export class NotifyManager {
         ...entry.progress,
         display: entry.progress?.display ?? {},
         current: update.progress.current,
-        ...(update.progress.total !== undefined ? { total: update.progress.total } : {}),
+        ...(update.progress.total !== undefined
+          ? { total: update.progress.total }
+          : {}),
       };
     }
 
@@ -180,21 +194,13 @@ export class NotifyManager {
   ): ProgressHandle {
     let resolved = false;
 
-    const resolveSuccess = (msg?: string) => {
-      const finalMsg = msg ?? messages?.success;
+    const resolve = (type: 'success' | 'error', msg?: string) => {
+      const finalMsg =
+        msg ?? (type === 'success' ? messages?.success : messages?.error);
       if (finalMsg !== undefined) {
-        this.update(id, { type: 'success', message: finalMsg });
+        this.update(id, { type, message: finalMsg });
       } else {
-        this.update(id, { type: 'success' });
-      }
-    };
-
-    const resolveError = (msg?: string) => {
-      const finalMsg = msg ?? messages?.error;
-      if (finalMsg !== undefined) {
-        this.update(id, { type: 'error', message: finalMsg });
-      } else {
-        this.update(id, { type: 'error' });
+        this.update(id, { type });
       }
     };
 
@@ -210,7 +216,7 @@ export class NotifyManager {
         // NOTE: auto-resolve when current reaches or exceeds total
         if (current >= config.total) {
           resolved = true;
-          resolveSuccess();
+          resolve('success');
         }
       },
       set: (current: number) => {
@@ -218,16 +224,16 @@ export class NotifyManager {
         this.update(id, { progress: { current, total: config.total } });
         if (current >= config.total) {
           resolved = true;
-          resolveSuccess();
+          resolve('success');
         }
       },
       done: (msg?: string) => {
         resolved = true;
-        resolveSuccess(msg);
+        resolve('success', msg);
       },
       fail: (msg?: string) => {
         resolved = true;
-        resolveError(msg);
+        resolve('error', msg);
       },
       label: (msg: string) => {
         this.update(id, { message: msg });
