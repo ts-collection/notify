@@ -196,29 +196,83 @@ notify.update(bar.id, {
 
 ## Promise
 
+`notify.promise()` returns a **dual-awaitable handle** — you can `await` it two ways depending on whether you want to handle the error yourself or receive a safe `{ data, error }` tuple.
+
+### Await the handle directly (safe — never throws)
+
+Returns a `ResolvedHandle` with `{ data, error }`. No try/catch needed.
+
 ```ts
-await notify.promise(fetch('/api/data'), {
+const handle = notify.promise(fetch('/api/data'), {
   loading: 'Fetching…',
   success: 'Fetched!',
   error: 'Request failed',
 });
+
+const { data, error } = await handle;
+
+if (error) {
+  notify.error('Something went wrong');
+} else {
+  notify.success(`Got ${data}`);
+}
+```
+
+### Await `.result` (raw — promise rejects on error)
+
+Get the resolved value directly. Throws if the promise rejects — wrap in try/catch.
+
+```ts
+const handle = notify.promise(fetch('/api/data'), {
+  loading: 'Fetching…',
+  success: 'Fetched!',
+  error: 'Request failed',
+});
+
+try {
+  const data = await handle.result;
+  notify.success(`Got ${data}`);
+} catch (err) {
+  notify.error('Request failed');
+}
 ```
 
 ### Callbacks
 
 ```ts
-await notify.promise(Promise.resolve(42), {
+const handle = notify.promise(Promise.resolve(42), {
   success: (data) => `Got ${data}`,
   error: (err) => `Error: ${err.message}`,
   finally: () => cleanup(),
 });
+
+// either style works with callbacks too
+const { data } = await handle;
 ```
 
 ### Function Labels
 
+Pass an async function directly — the label is derived from the function name.
+
 ```ts
 async function fetchUser() { return 'Alice'; }
-await notify.promise(fetchUser);
+const { data } = await notify.promise(fetchUser);
+```
+
+### `PromiseHandle<T>` type
+
+```ts
+interface PromiseHandle<T> extends NotifyHandle, PromiseLike<ResolvedHandle<T>> {
+  /** Awaited directly: never rejects, returns { data, error } */
+  then: ...
+  /** Awaited manually: resolves to T, rejects on error */
+  result: Promise<T>;
+}
+
+interface ResolvedHandle<T> extends NotifyHandle {
+  data: T | undefined;
+  error: unknown;
+}
 ```
 
 ## Toast (auto-dismiss)
@@ -288,7 +342,7 @@ Partially updates a notification.
 
 ### `notify.promise(promiseOrFn, messages?, options?)` → `PromiseHandle<T>`
 
-Returns a handle with a `.result` promise.
+Returns a handle that acts as both a `PromiseLike<ResolvedHandle<T>>` (await directly for `{ data, error }`) and has a `.result` promise (await for raw value `T`, rejects on error).
 
 ### `notify.dismiss(id)`
 

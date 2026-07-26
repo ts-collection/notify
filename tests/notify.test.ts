@@ -8,7 +8,8 @@ const { mockLogUpdate, mockLogUpdateClear } = vi.hoisted(() => {
 });
 
 vi.mock('log-update', () => ({
-  createLogUpdate: () => Object.assign(mockLogUpdate, { clear: mockLogUpdateClear }),
+  createLogUpdate: () =>
+    Object.assign(mockLogUpdate, { clear: mockLogUpdateClear }),
 }));
 
 vi.useFakeTimers();
@@ -244,10 +245,14 @@ describe('notify – style options', () => {
   });
 
   it('color + backgroundColor + modifier combined', () => {
-    notify(
-      'combo',
-      { style: { color: 'green', backgroundColor: 'bgBlack', bold: true, italic: true } },
-    );
+    notify('combo', {
+      style: {
+        color: 'green',
+        backgroundColor: 'bgBlack',
+        bold: true,
+        italic: true,
+      },
+    });
     tick();
     expect(hasAnsi(lastRaw())).toBe(true);
     expect(lastRender()).toMatch(/combo/);
@@ -268,7 +273,9 @@ describe('notify – style options', () => {
   });
 
   it('style can be applied to warning type', () => {
-    notify.warning('styled warning', { style: { color: 'red', underline: true } });
+    notify.warning('styled warning', {
+      style: { color: 'red', underline: true },
+    });
     tick();
     expect(hasAnsi(lastRaw())).toBe(true);
     expect(lastRender()).toMatch(/styled warning/);

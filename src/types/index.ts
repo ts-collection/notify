@@ -81,9 +81,14 @@ export type ProgressHandle = NotifyHandle & {
   label: (msg: string) => void;
 };
 
+export type ResolvedHandle<T> = NotifyHandle & {
+  data: T | undefined;
+  error: unknown;
+};
+
 export type PromiseHandle<T> = NotifyHandle & {
   result: Promise<T>;
-};
+} & PromiseLike<ResolvedHandle<T>>;
 
 export type ProgressMessages = {
   success?: string;

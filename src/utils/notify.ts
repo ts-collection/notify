@@ -8,6 +8,7 @@ import type {
   ProgressMessages,
   PromiseHandle,
   PromiseMessages,
+  ResolvedHandle,
 } from '../types';
 
 import { deriveLabel } from './helpers';
@@ -90,7 +91,17 @@ base.promise = <T>(
     })
     .finally(() => messages.finally?.());
 
-  return { ...handle, result };
+  // NOTE: never rejects — swallows the rethrow above into { data, error }
+  const settled$ = result.then(
+    (data): ResolvedHandle<T> => ({ ...handle, data, error: undefined }),
+    (error): ResolvedHandle<T> => ({ ...handle, data: undefined, error }),
+  );
+
+  return {
+    ...handle,
+    result,
+    then: settled$.then.bind(settled$),
+  };
 };
 
 base.dismiss = (id: string) => manager.dismiss(id);

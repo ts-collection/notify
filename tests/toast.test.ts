@@ -7,11 +7,18 @@ const { mockLogUpdate, mockLogUpdateClear } = vi.hoisted(() => {
 });
 
 vi.mock('log-update', () => ({
-  createLogUpdate: () => Object.assign(mockLogUpdate, { clear: mockLogUpdateClear }),
+  createLogUpdate: () =>
+    Object.assign(mockLogUpdate, { clear: mockLogUpdateClear }),
 }));
 
 vi.useFakeTimers({
-  toFake: ['Date', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'],
+  toFake: [
+    'Date',
+    'setTimeout',
+    'clearTimeout',
+    'setInterval',
+    'clearInterval',
+  ],
 });
 
 import { notify } from '../src/utils/notify';
@@ -28,7 +35,9 @@ function lastRaw(): string {
 }
 
 function lastRender(): string {
-  return lastRaw().replace(/\u001b\[[0-9;]*m/g, '').trim();
+  return lastRaw()
+    .replace(/\u001b\[[0-9;]*m/g, '')
+    .trim();
 }
 
 beforeEach(() => {
@@ -160,7 +169,10 @@ describe('toast', () => {
     notify('anchor');
     tick();
 
-    toast('styled transient', { duration: 500, style: { color: 'cyan', underline: true } });
+    toast('styled transient', {
+      duration: 500,
+      style: { color: 'cyan', underline: true },
+    });
     tick();
     expect(lastRender()).toMatch(/styled transient/);
 
@@ -170,7 +182,10 @@ describe('toast', () => {
   });
 
   it('custom duration toast passes style to wrapped notify call', () => {
-    toast.info('colored toast', { duration: 2000, style: { color: 'magenta' } });
+    toast.info('colored toast', {
+      duration: 2000,
+      style: { color: 'magenta' },
+    });
     tick();
     expect(lastRender()).toMatch(/colored toast/);
   });
