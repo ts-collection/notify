@@ -82,7 +82,7 @@ export type ProgressHandle = NotifyHandle & {
 };
 
 export type ResolvedHandle<T> = NotifyHandle & {
-  data: T | undefined;
+  data: T;
   error: unknown;
 };
 

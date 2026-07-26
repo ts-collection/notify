@@ -1,8 +1,8 @@
 import type {
   NotifyHandle,
   NotifyOptions,
-  ProgressHandle,
   ProgressConfig,
+  ProgressHandle,
   ProgressMessages,
   PromiseHandle,
   PromiseMessages,
