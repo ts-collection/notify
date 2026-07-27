@@ -107,6 +107,27 @@ export type ProgressConfig = {
   }>;
 };
 
+export type NotifyVariantConfig = {
+  icon?: string;
+  style?: NotifyStyleOptions;
+};
+
+// NOTE: global defaults config — set once via notify.defaults()
+export type NotifyDefaults =
+  // Top-level fallbacks for any type
+  NotifyVariantConfig & {
+    toast?: {
+      defaultDuration?: number;
+    };
+    progress?: {
+      defaultVariant?: ProgressVariant;
+      defaultDisplay?: ProgressInitOptions['display'];
+    };
+    keepAlive?: boolean;
+    // Per-type overrides (win over top-level)
+    variants?: Partial<Record<NotifyType, NotifyVariantConfig>>;
+  };
+
 export type NotifyEntry = {
   id: string;
   type: NotifyType;

@@ -1,4 +1,5 @@
 import type {
+  NotifyDefaults,
   NotifyHandle,
   NotifyOptions,
   NotifyUpdate,
@@ -98,6 +99,7 @@ base.promise = <T>(
   };
 };
 
+base.defaults = (cfg: NotifyDefaults) => manager.setDefaults(cfg);
 base.dismiss = (id: string) => manager.dismiss(id);
 base.clear = () => manager.clear();
 
