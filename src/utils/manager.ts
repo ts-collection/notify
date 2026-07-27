@@ -109,6 +109,7 @@ export class NotifyManager {
       id,
       type,
       message,
+      ...(options.icon !== undefined ? { icon: options.icon } : {}),
       createdAt: Date.now(),
       duration,
       persistent: !isToast,
@@ -180,6 +181,10 @@ export class NotifyManager {
 
     if (update.options?.keepAlive !== undefined) {
       entry.keepAlive = update.options.keepAlive;
+    }
+
+    if (update.options?.icon !== undefined) {
+      entry.icon = update.options.icon;
     }
 
     if (update.options?.style !== undefined) {

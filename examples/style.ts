@@ -40,6 +40,21 @@ await sleep(400);
 notify('None mode — no ANSI at all', { style: { mode: 'none' } });
 await sleep(400);
 
+notify('Custom icon — rocket', { icon: '🚀', style: { bold: true } });
+await sleep(400);
+
+notify.success('Custom icon + colored', { icon: '🎉', style: { color: 'green', bold: true } });
+await sleep(400);
+
+notify.loading('Custom spinner replacement', { id: 'custom_spinner', icon: '🌀' });
+await sleep(800);
+notify.update('custom_spinner', {
+  type: 'success',
+  message: 'Custom spinner done!',
+  options: { icon: '✅' },
+});
+await sleep(400);
+
 let counter = 0;
 const interval = setInterval(() => {
   const colors = ['red', 'green', 'yellow', 'blue', 'magenta', 'cyan'];

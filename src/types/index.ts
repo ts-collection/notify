@@ -46,6 +46,7 @@ export type NotifyStyleOptions = {
 // NOTE: developer options
 export type NotifyOptions = {
   id?: string;
+  icon?: string;
   toast?: boolean | { duration: number };
   keepAlive?: boolean;
   style?: NotifyStyleOptions;
@@ -110,6 +111,7 @@ export type NotifyEntry = {
   id: string;
   type: NotifyType;
   message: string;
+  icon?: string;
   createdAt: number;
   duration: number;
   persistent: boolean;

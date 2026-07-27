@@ -180,6 +180,7 @@ export function formatProgress(progress: ProgressInitOptions): string {
 }
 
 export function getIconChar(t: NotifyEntry): string {
+  if (t.icon) return t.icon;
   if (t.type === 'progress' && t.progress?.display?.spinner === false)
     return '▸';
   if (t.type === 'loading' || t.type === 'progress')

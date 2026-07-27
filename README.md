@@ -36,6 +36,29 @@ notify.dismiss(id);            // remove one
 notify.clear();                // remove all
 ```
 
+## Icons
+
+Override the default type-based icon with any character or emoji.
+
+```ts
+notify('Rocket launch', { icon: '🚀' });
+notify.success('Party time', { icon: '🎉' });
+notify.loading('Working', { icon: '🌀' });
+```
+
+Custom icons work with `update` to change the icon dynamically:
+
+```ts
+const { id } = notify.loading('Processing', { id: 'task' });
+notify.update(id, {
+  type: 'success',
+  message: 'Done!',
+  options: { icon: '✅' },
+});
+```
+
+When `icon` is set, it completely replaces the default character (including loading/progress spinners).
+
 ## Style
 
 Every notification accepts a `style` option to control color, background, modifier flags, and mode.
@@ -288,6 +311,7 @@ toast.clear();
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `id` | `string` | auto | Custom notification id (replaces existing) |
+| `icon` | `string` | — | Custom icon character or emoji |
 | `toast` | `boolean \| { duration: number }` | — | Makes entry auto-dismiss |
 | `keepAlive` | `boolean` | `false` | Keeps process alive until dismissed |
 | `style` | `NotifyStyleOptions` | — | Color, background, modifier flags |
