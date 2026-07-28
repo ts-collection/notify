@@ -17,16 +17,20 @@ export type ProgressBarSet = {
   empty: string;
 };
 
+export type NotifyDisplay = {
+  icon?: boolean;
+  elapsed?: boolean;
+  // progress-specific
+  spinner?: boolean;
+  brackets?: boolean;
+  percentage?: boolean;
+  count?: boolean;
+};
+
 export type ProgressInitOptions = {
   current: number;
   total?: number;
   variant?: ProgressVariant;
-  display?: Partial<{
-    spinner: boolean;
-    brackets: boolean;
-    percentage: boolean;
-    count: boolean;
-  }>;
 };
 
 export type ProgressOptions = Pick<ProgressInitOptions, 'current' | 'total'>;
@@ -50,6 +54,7 @@ export type NotifyOptions = {
   toast?: boolean | { duration: number };
   keepAlive?: boolean;
   style?: NotifyStyleOptions;
+  display?: Partial<NotifyDisplay>;
 };
 
 // NOTE: internal options
@@ -99,17 +104,12 @@ export type ProgressMessages = {
 export type ProgressConfig = {
   total?: number;
   variant?: ProgressVariant;
-  display?: Partial<{
-    spinner: boolean;
-    brackets: boolean;
-    percentage: boolean;
-    count: boolean;
-  }>;
 };
 
 export type NotifyVariantConfig = {
   icon?: string;
   style?: NotifyStyleOptions;
+  display?: Partial<NotifyDisplay>;
 };
 
 // NOTE: global defaults config — set once via notify.defaults()
@@ -121,7 +121,7 @@ export type NotifyDefaults =
     };
     progress?: {
       defaultVariant?: ProgressVariant;
-      defaultDisplay?: ProgressInitOptions['display'];
+      defaultDisplay?: Partial<NotifyDisplay>;
     };
     keepAlive?: boolean;
     // Per-type overrides (win over top-level)
@@ -139,5 +139,6 @@ export type NotifyEntry = {
   keepAlive: boolean;
   spinnerIndex: number;
   style?: NotifyStyleOptions | undefined;
+  display?: Partial<NotifyDisplay> | undefined;
   progress?: ProgressInitOptions | undefined;
 };

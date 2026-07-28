@@ -16,17 +16,19 @@ export const DEFAULT_TOAST_DURATION = 3000;
 
 // NOTE: built-in defaults
 export const LIBRARY_DEFAULTS: NotifyDefaults = {
+  display: {
+    icon: true,
+    elapsed: false,
+    spinner: true,
+    brackets: false,
+    percentage: true,
+    count: true,
+  },
   toast: {
     defaultDuration: DEFAULT_TOAST_DURATION,
   },
   progress: {
     defaultVariant: 'bar',
-    defaultDisplay: {
-      spinner: true,
-      brackets: false,
-      percentage: true,
-      count: true,
-    },
   },
   variants: {
     success: { icon: '√', style: { color: 'green' } },

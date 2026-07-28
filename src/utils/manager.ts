@@ -1,5 +1,6 @@
 import type {
   NotifyDefaults,
+  NotifyDisplay,
   NotifyEntry,
   NotifyHandle,
   NotifyOptions,
@@ -53,18 +54,25 @@ export class NotifyManager {
     const lines = this.entries.map((t) => {
       const styler = resolveStyle(t.style);
       const mode = t.style?.mode ?? 'all';
+      const disp = t.display ?? {};
       const colorIcon = mode === 'all' || mode === 'icon-only';
       const colorText = mode === 'all' || mode === 'text-only';
-      const icon = `${colorIcon ? getColoredIcon(t, styler) : getIconChar(t)} `;
+      const iconChar = colorIcon
+        ? getColoredIcon(t, styler, disp)
+        : getIconChar(t, disp);
+      const iconPart = disp.icon !== false ? `${iconChar} ` : '';
       const message = colorText
         ? colorMessage(t.type, t.message, styler)
         : t.message;
-      const progressText = t.progress ? formatProgress(t.progress) : '';
+      const progressText = t.progress ? formatProgress(t.progress, disp) : '';
       const progressSuffix = progressText
         ? ` ${colorText ? colorMessage(t.type, progressText, styler) : progressText}`
         : '';
+      const elapsedSuffix = disp.elapsed
+        ? ` (${((Date.now() - t.createdAt) / 1000).toFixed(1)}s)`
+        : '';
       if (t.type === 'loading' || t.type === 'progress') t.spinnerIndex++;
-      return `${icon}${message}${progressSuffix}`;
+      return `${iconPart}${message}${elapsedSuffix}${progressSuffix}`;
     });
 
     this.renderLoop.write(lines);
@@ -137,18 +145,23 @@ export class NotifyManager {
     return globalStyle;
   }
 
+  // NOTE: resolve display: per-call > defaults.variants[type].display > defaults.display
+  private resolveDisplay(
+    type: NotifyType,
+    perCallDisplay?: Partial<NotifyDisplay>,
+  ): Partial<NotifyDisplay> | undefined {
+    if (perCallDisplay) return perCallDisplay;
+    return (
+      this.defaults.variants?.[type]?.display ?? this.defaults.display
+    );
+  }
+
   // NOTE: resolve progress defaults — explicit build to satisfy exactOptionalPropertyTypes
   private resolveProgressDefaults(
     progress?: ProgressInitOptions,
   ): ProgressInitOptions | undefined {
     if (!progress) return undefined;
-    const result: ProgressInitOptions = {
-      current: progress.current,
-      display: {
-        ...this.defaults.progress?.defaultDisplay,
-        ...progress.display,
-      },
-    };
+    const result: ProgressInitOptions = { current: progress.current };
     if (progress.total !== undefined) result.total = progress.total;
     const variant = progress.variant ?? this.defaults.progress?.defaultVariant;
     if (variant !== undefined) result.variant = variant;
@@ -170,6 +183,7 @@ export class NotifyManager {
 
     const icon = this.resolveIcon(type, options.icon);
     const style = this.resolveStyle(type, options.style);
+    const display = this.resolveDisplay(type, options.display);
     const keepAlive = options.keepAlive ?? this.defaults.keepAlive ?? false;
     const progress = this.resolveProgressDefaults(options.progress);
 
@@ -184,6 +198,7 @@ export class NotifyManager {
       keepAlive,
       spinnerIndex: existing?.spinnerIndex ?? 0,
       style,
+      display,
     };
 
     if (progress) entry.progress = progress;
@@ -237,7 +252,6 @@ export class NotifyManager {
       // NOTE: preserve initial variant/display — update only touches current/total
       entry.progress = {
         ...entry.progress,
-        display: entry.progress?.display ?? {},
         current: update.progress.current,
         ...(update.progress.total !== undefined
           ? { total: update.progress.total }

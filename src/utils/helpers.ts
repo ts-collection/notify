@@ -2,6 +2,7 @@ import type { ChalkInstance } from 'chalk';
 import chalk, { modifierNames } from 'chalk';
 import type {
   NotifyColor,
+  NotifyDisplay,
   NotifyEntry,
   NotifyOptions,
   NotifyStyleOptions,
@@ -140,9 +141,16 @@ export function colorMessage(
   }
 }
 
-export function formatProgress(progress: ProgressInitOptions): string {
-  const { current, total, variant, display } = progress;
-  const { brackets = false, percentage = true, count = true } = display ?? {};
+export function formatProgress(
+  progress: ProgressInitOptions,
+  disp?: Partial<NotifyDisplay>,
+): string {
+  const { current, total, variant } = progress;
+  const {
+    brackets = false,
+    percentage = true,
+    count = true,
+  } = disp ?? {};
 
   const parts: string[] = [];
 
@@ -179,10 +187,15 @@ export function formatProgress(progress: ProgressInitOptions): string {
   return parts.join(' ');
 }
 
-export function getIconChar(t: NotifyEntry): string {
+export function getIconChar(
+  t: NotifyEntry,
+  disp?: Partial<NotifyDisplay>,
+): string {
+  const spinnerOff =
+    (t.type === 'loading' || t.type === 'progress') &&
+    disp?.spinner === false;
   if (t.icon) return t.icon;
-  if (t.type === 'progress' && t.progress?.display?.spinner === false)
-    return '▸';
+  if (spinnerOff) return '▸';
   if (t.type === 'loading' || t.type === 'progress')
     return SPINNER_FRAMES[t.spinnerIndex % SPINNER_FRAMES.length]!;
   if (t.type === 'success') return '√';
@@ -195,11 +208,10 @@ export function getIconChar(t: NotifyEntry): string {
 export function getColoredIcon(
   t: NotifyEntry,
   styler?: (text: string) => string,
+  disp?: Partial<NotifyDisplay>,
 ): string {
-  const char = getIconChar(t);
+  const char = getIconChar(t, disp);
   if (styler) return styler(char);
-  if (t.type === 'progress' && t.progress?.display?.spinner === false)
-    return chalk.cyan(char);
   if (t.type === 'loading' || t.type === 'progress') return chalk.cyan(char);
   if (t.type === 'success') return chalk.green(char);
   if (t.type === 'error') return chalk.red(char);

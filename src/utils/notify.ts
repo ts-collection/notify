@@ -46,7 +46,6 @@ base.progress = (
     ...(config.total !== undefined ? { total: config.total } : {}),
   };
   if (config.variant !== undefined) progress.variant = config.variant;
-  if (config.display !== undefined) progress.display = config.display;
   const id = manager.add('loading', loadingMsg, { ...options, progress });
   return manager.progressHandle(id, config, messages, options);
 };
