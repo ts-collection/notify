@@ -1,24 +1,27 @@
 import type {
+  NotifyDefaults,
   NotifyEntry,
   NotifyHandle,
   NotifyOptions,
+  NotifyStyleOptions,
   NotifyType,
   NotifyUpdate,
   ProgressConfig,
   ProgressHandle,
   ProgressInitOptions,
 } from '../types';
+import { DEFAULT_TOAST_DURATION, LIBRARY_DEFAULTS } from './constants';
 import {
   colorMessage,
   formatProgress,
   getColoredIcon,
   getIconChar,
   resolveStyle,
-  resolveToast,
 } from './helpers';
 import { RenderLoop } from './renderer';
 
 export class NotifyManager {
+  private defaults: NotifyDefaults = LIBRARY_DEFAULTS;
   private entries: NotifyEntry[] = [];
   private counter = 0;
   private renderLoop = new RenderLoop();
@@ -50,17 +53,15 @@ export class NotifyManager {
     const lines = this.entries.map((t) => {
       const styler = resolveStyle(t.style);
       const mode = t.style?.mode ?? 'all';
-      const icon = `${
-        mode === 'all' || mode === 'icon-only'
-          ? getColoredIcon(t, styler)
-          : getIconChar(t)
-      } `;
-      const message =
-        mode === 'all' || mode === 'text-only'
-          ? colorMessage(t.type, t.message, styler)
-          : t.message;
-      const progressSuffix = t.progress
-        ? ` ${mode === 'all' || mode === 'text-only' ? colorMessage(t.type, formatProgress(t.progress), styler) : formatProgress(t.progress)}`
+      const colorIcon = mode === 'all' || mode === 'icon-only';
+      const colorText = mode === 'all' || mode === 'text-only';
+      const icon = `${colorIcon ? getColoredIcon(t, styler) : getIconChar(t)} `;
+      const message = colorText
+        ? colorMessage(t.type, t.message, styler)
+        : t.message;
+      const progressText = t.progress ? formatProgress(t.progress) : '';
+      const progressSuffix = progressText
+        ? ` ${colorText ? colorMessage(t.type, progressText, styler) : progressText}`
         : '';
       if (t.type === 'loading' || t.type === 'progress') t.spinnerIndex++;
       return `${icon}${message}${progressSuffix}`;
@@ -82,17 +83,76 @@ export class NotifyManager {
     }
   }
 
-  // NOTE: derive persistence and toast config from type
-  private persistConfig(
-    type: NotifyType,
-    toastOption?: NotifyOptions['toast'],
-  ) {
-    const persistent = type === 'loading' || type === 'progress';
-    if (persistent) {
-      return { persistent, isToast: false, duration: Number.POSITIVE_INFINITY };
+  setDefaults(cfg: NotifyDefaults) {
+    if (cfg.variants) {
+      this.defaults.variants = {
+        ...this.defaults.variants,
+        ...cfg.variants,
+      };
     }
-    const { isToast, duration } = resolveToast(toastOption);
-    return { persistent, isToast, duration };
+    if (cfg.toast) {
+      this.defaults.toast = { ...this.defaults.toast, ...cfg.toast };
+    }
+    if (cfg.progress) {
+      this.defaults.progress = { ...this.defaults.progress, ...cfg.progress };
+    }
+    if (cfg.icon !== undefined) this.defaults.icon = cfg.icon;
+    if (cfg.style !== undefined) this.defaults.style = cfg.style;
+    if (cfg.keepAlive !== undefined) this.defaults.keepAlive = cfg.keepAlive;
+  }
+
+  // NOTE: resolve icon: per-call > defaults.variants[type].icon > defaults.icon > hardcoded (handled in helpers)
+  private resolveIcon(
+    type: NotifyType,
+    perCallIcon?: string,
+  ): string | undefined {
+    if (perCallIcon !== undefined) return perCallIcon;
+    return this.defaults.variants?.[type]?.icon ?? this.defaults.icon;
+  }
+
+  // NOTE: resolve toast: per-call > defaults.toast.defaultDuration > helpers hardcoded
+  private resolveToast(toastOption: NotifyOptions['toast']) {
+    if (!toastOption)
+      return { isToast: false, duration: Number.POSITIVE_INFINITY };
+    if (toastOption === true) {
+      return {
+        isToast: true,
+        duration:
+          this.defaults.toast?.defaultDuration ?? DEFAULT_TOAST_DURATION,
+      };
+    }
+    return { isToast: true, duration: toastOption.duration };
+  }
+
+  // NOTE: resolve style: per-call > defaults.variants[type].style > defaults.style > hardcoded
+  private resolveStyle(
+    type: NotifyType,
+    perCallStyle?: NotifyStyleOptions,
+  ): NotifyStyleOptions | undefined {
+    const variantStyle = this.defaults.variants?.[type]?.style;
+    const globalStyle = this.defaults.style;
+    // RESOLVE: order per call > variant > global
+    if (perCallStyle) return perCallStyle;
+    if (variantStyle) return variantStyle;
+    return globalStyle;
+  }
+
+  // NOTE: resolve progress defaults — explicit build to satisfy exactOptionalPropertyTypes
+  private resolveProgressDefaults(
+    progress?: ProgressInitOptions,
+  ): ProgressInitOptions | undefined {
+    if (!progress) return undefined;
+    const result: ProgressInitOptions = {
+      current: progress.current,
+      display: {
+        ...this.defaults.progress?.defaultDisplay,
+        ...progress.display,
+      },
+    };
+    if (progress.total !== undefined) result.total = progress.total;
+    const variant = progress.variant ?? this.defaults.progress?.defaultVariant;
+    if (variant !== undefined) result.variant = variant;
+    return result;
   }
 
   add(
@@ -103,22 +163,30 @@ export class NotifyManager {
     const id = options.id ?? this.nextId();
     const existing = this.entries.find((t) => t.id === id);
 
-    const { isToast, duration } = this.persistConfig(type, options.toast);
+    const loadingType = type === 'loading' || type === 'progress';
+    const duration = loadingType
+      ? Number.POSITIVE_INFINITY
+      : this.resolveToast(options.toast).duration;
+
+    const icon = this.resolveIcon(type, options.icon);
+    const style = this.resolveStyle(type, options.style);
+    const keepAlive = options.keepAlive ?? this.defaults.keepAlive ?? false;
+    const progress = this.resolveProgressDefaults(options.progress);
 
     const entry: NotifyEntry = {
       id,
       type,
       message,
-      ...(options.icon !== undefined ? { icon: options.icon } : {}),
+      ...(icon !== undefined ? { icon } : {}),
       createdAt: Date.now(),
       duration,
-      persistent: !isToast,
-      keepAlive: options.keepAlive ?? false,
+      persistent: loadingType,
+      keepAlive,
       spinnerIndex: existing?.spinnerIndex ?? 0,
-      style: options.style,
+      style,
     };
 
-    if (options.progress) entry.progress = options.progress;
+    if (progress) entry.progress = progress;
     if (existing) Object.assign(existing, entry);
     else this.entries.push(entry);
 
@@ -149,16 +217,16 @@ export class NotifyManager {
       // NOTE: clear progress when switching away from progress type
       if (update.type !== 'progress') delete entry.progress;
 
-      const { isToast, duration } = this.persistConfig(
-        update.type,
-        update.options?.toast ??
-          (entry.persistent ? undefined : { duration: entry.duration }),
-      );
-      entry.duration = duration;
-      entry.persistent =
-        !isToast || !update.options?.toast
-          ? update.type === 'loading' || update.type === 'progress'
-          : false;
+      if (update.type === 'loading' || update.type === 'progress') {
+        entry.duration = Number.POSITIVE_INFINITY;
+        entry.persistent = true;
+      } else {
+        const toastOption = update.options?.toast ?? {
+          duration: entry.duration,
+        };
+        entry.duration = this.resolveToast(toastOption).duration;
+        entry.persistent = false;
+      }
     }
 
     if (update.message !== undefined) {
@@ -189,6 +257,9 @@ export class NotifyManager {
 
     if (update.options?.style !== undefined) {
       entry.style = update.options.style;
+    } else if (update.type && update.type !== entry.type) {
+      // NOTE: re-resolve style from defaults when type changes
+      entry.style = this.resolveStyle(update.type, undefined);
     }
 
     if (update.type === 'loading') {

@@ -43,10 +43,16 @@ await sleep(400);
 notify('Custom icon — rocket', { icon: '🚀', style: { bold: true } });
 await sleep(400);
 
-notify.success('Custom icon + colored', { icon: '🎉', style: { color: 'green', bold: true } });
+notify.success('Custom icon + colored', {
+  icon: '🎉',
+  style: { color: 'green', bold: true },
+});
 await sleep(400);
 
-notify.loading('Custom spinner replacement', { id: 'custom_spinner', icon: '🌀' });
+notify.loading('Custom spinner replacement', {
+  id: 'custom_spinner',
+  icon: '🌀',
+});
 await sleep(800);
 notify.update('custom_spinner', {
   type: 'success',
