@@ -306,6 +306,51 @@ toast.dismiss(id);
 toast.clear();
 ```
 
+## Timer
+
+`timer` is a standalone utility for measuring elapsed time. Works independently of notifications — use it anywhere in your code.
+
+```ts
+import { timer } from '@ts-utilities/notify';
+
+timer.start('fetch');
+const data = await fetch('/api');
+console.log(timer.get('fetch'));       // 1.234 (seconds)
+console.log(timer.stop('fetch', 'ms')); // 1234, timer removed
+```
+
+### `timer.start(id)`
+
+Starts tracking a named timer. Silently overwrites if the id already exists.
+
+### `timer.get(id, unit?)`
+
+Returns elapsed time since `start()`. Timer keeps running. Throws if the id doesn't exist.
+
+| unit | granularity |
+|------|-------------|
+| `'s'` (default) | seconds |
+| `'ms'` | milliseconds |
+| `'m'` | minutes |
+
+### `timer.stop(id, unit?)`
+
+Returns elapsed time and removes the timer. Same unit options as `get()`.
+
+### Combining with notifications
+
+```ts
+timer.start('api');
+const h = notify.loading('api request...', { display: { timer: true } });
+await sleep(1500);
+h.update({
+  type: 'success',
+  message: `api done in ${timer.stop('api').toFixed(2)}s`,
+});
+```
+
+The notification shows a live ticking timer. `timer.stop()` gives the exact precision value for the final message.
+
 ## Options
 
 | Option | Type | Default | Description |
@@ -334,6 +379,7 @@ import type {
   ProgressConfig,
   PromiseMessages,
   PromiseHandle,
+  TimerUnit,
 } from '@ts-utilities/notify';
 ```
 
@@ -360,3 +406,9 @@ Returns a thenable handle — `await handle` and `await handle.result` both reso
 ### `notify.dismiss(id)`
 
 ### `notify.clear()`
+
+### `timer.start(id)`
+
+### `timer.get(id, unit?)`
+
+### `timer.stop(id, unit?)`

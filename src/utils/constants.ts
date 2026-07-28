@@ -35,8 +35,8 @@ export const LIBRARY_DEFAULTS: NotifyDefaults = {
     error: { icon: '×', style: { color: 'red' } },
     warning: { icon: '▲', style: { color: 'yellow' } },
     info: { icon: 'i', style: { color: 'cyan' } },
-    loading: { style: { color: 'cyan' } },
-    progress: { style: { color: 'cyan' } },
+    loading: { style: { color: 'cyan' }, display: { timer: true } },
+    progress: { style: { color: 'cyan' }, display: { timer: true } },
     default: { icon: '●' },
   },
 };

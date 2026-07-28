@@ -1,6 +1,8 @@
 import type { ChalkInstance, ForegroundColorName, ModifierName } from 'chalk';
 import type { CustomColor } from './color';
 
+export type TimerUnit = 'ms' | 's' | 'm';
+
 export type NotifyType =
   | 'default'
   | 'success'
@@ -121,7 +123,6 @@ export type NotifyDefaults =
     };
     progress?: {
       defaultVariant?: ProgressVariant;
-      defaultDisplay?: Partial<NotifyDisplay>;
     };
     keepAlive?: boolean;
     // Per-type overrides (win over top-level)
