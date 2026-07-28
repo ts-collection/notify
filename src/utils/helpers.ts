@@ -7,12 +7,14 @@ import type {
   NotifyOptions,
   NotifyStyleOptions,
   NotifyType,
-  ProgressBarSet,
   ProgressInitOptions,
-  ProgressVariant,
 } from '../types';
 
-import { DEFAULT_TOAST_DURATION, SPINNER_FRAMES } from './constants';
+import {
+  DEFAULT_TOAST_DURATION,
+  PROGRESS_BARS,
+  SPINNER_FRAMES,
+} from './constants';
 
 export function deriveLabel(
   promiseOrFn: Promise<unknown> | (() => Promise<unknown>),
@@ -24,15 +26,20 @@ export function deriveLabel(
   return '';
 }
 
-const PROGRESS_BARS: Record<
-  Exclude<ProgressVariant, 'none'>,
-  ProgressBarSet
-> = {
-  bar: { full: '█', empty: '░' },
-  block: { full: '█', empty: ' ' },
-  line: { full: '━', empty: '─' },
-  dot: { full: '●', empty: '○' },
-};
+export function formatElapsed(ms: number): string {
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
+
+  const totalSec = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSec / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  const secs = totalSec % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${mins}m ${secs}s`;
+  }
+  return `${mins}m ${secs}s`;
+}
 
 // NOTE: resolve a color value to a chalk instance
 function chalkFromColor(
@@ -146,11 +153,7 @@ export function formatProgress(
   disp?: Partial<NotifyDisplay>,
 ): string {
   const { current, total, variant } = progress;
-  const {
-    brackets = false,
-    percentage = true,
-    count = true,
-  } = disp ?? {};
+  const { brackets = false, percentage = true, count = true } = disp ?? {};
 
   const parts: string[] = [];
 
@@ -192,8 +195,7 @@ export function getIconChar(
   disp?: Partial<NotifyDisplay>,
 ): string {
   const spinnerOff =
-    (t.type === 'loading' || t.type === 'progress') &&
-    disp?.spinner === false;
+    (t.type === 'loading' || t.type === 'progress') && disp?.spinner === false;
   if (t.icon) return t.icon;
   if (spinnerOff) return '▸';
   if (t.type === 'loading' || t.type === 'progress')

@@ -1,4 +1,4 @@
-import type { NotifyDefaults } from '../types';
+import type { NotifyDefaults, ProgressBarSet, ProgressVariant } from '../types';
 
 export const SPINNER_FRAMES = [
   '⠋',
@@ -12,6 +12,17 @@ export const SPINNER_FRAMES = [
   '⠇',
   '⠏',
 ];
+
+export const PROGRESS_BARS: Record<
+  Exclude<ProgressVariant, 'none'>,
+  ProgressBarSet
+> = {
+  bar: { full: '█', empty: '░' },
+  block: { full: '█', empty: ' ' },
+  line: { full: '━', empty: '─' },
+  dot: { full: '●', empty: '○' },
+};
+
 export const DEFAULT_TOAST_DURATION = 3000;
 
 // NOTE: built-in defaults

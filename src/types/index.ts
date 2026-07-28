@@ -1,7 +1,7 @@
 import type { ChalkInstance, ForegroundColorName, ModifierName } from 'chalk';
 import type { CustomColor } from './color';
 
-export type TimerUnit = 'ms' | 's' | 'm';
+export type TimerUnit = 'auto' | 'ms' | 's' | 'm';
 
 export type NotifyType =
   | 'default'

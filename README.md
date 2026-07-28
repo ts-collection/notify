@@ -329,8 +329,9 @@ Returns elapsed time since `start()`. Timer keeps running. Throws if the id does
 
 | unit | granularity |
 |------|-------------|
-| `'s'` (default) | seconds |
+| `'auto'` (default) | smart — `500ms`, `2.5s`, `2m 30s`, `1h 15m 30s` |
 | `'ms'` | milliseconds |
+| `'s'` | seconds |
 | `'m'` | minutes |
 
 ### `timer.stop(id, unit?)`
@@ -350,6 +351,40 @@ h.update({
 ```
 
 The notification shows a live ticking timer. `timer.stop()` gives the exact precision value for the final message.
+
+### `timer.measure(fn, messages?)`
+
+Wraps a function, runs it, and auto-displays the elapsed time when done. Supports sync and async functions.
+
+```ts
+// Auto-message (uses function name as label)
+timer.measure(() => doWork());
+// → doWork Completed in 2.0s
+
+// With loading + custom success callback
+timer.measure(
+  () => heavyComputation(),
+  {
+    loading: 'Working...',
+    success: (elapsed) => `done in ${elapsed.toFixed(2)}s`,
+    error: (err) => `error: ${(err as Error).message}`,
+  },
+);
+
+// Async function
+const data = await timer.measure(async () => {
+  const res = await fetch('/api');
+  return res.json();
+});
+```
+
+| message | Default example | Callback signature |
+|---------|-----------------|--------------------|
+| `loading` | (no loading shown) | — |
+| `success` | `"fnName Completed in 2.5s"` | `(elapsed: number) => string` — elapsed in seconds |
+| `error` | `"fnName Failed in 1.2s"` | `(error: unknown) => string` |
+
+If `loading` is omitted, the function runs without a loading notification — only the result is displayed.
 
 ## Options
 
@@ -412,3 +447,5 @@ Returns a thenable handle — `await handle` and `await handle.result` both reso
 ### `timer.get(id, unit?)`
 
 ### `timer.stop(id, unit?)`
+
+### `timer.measure(fn, messages?)`

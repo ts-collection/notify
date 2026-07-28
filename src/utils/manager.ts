@@ -14,6 +14,7 @@ import type {
 import { DEFAULT_TOAST_DURATION, LIBRARY_DEFAULTS } from './constants';
 import {
   colorMessage,
+  formatElapsed,
   formatProgress,
   getColoredIcon,
   getIconChar,
@@ -68,8 +69,8 @@ export class NotifyManager {
       const progressSuffix = progressText
         ? ` ${colorText ? colorMessage(t.type, progressText, styler) : progressText}`
         : '';
-      const elapsedSeconds = t.elapsed ?? (Date.now() - t.createdAt) / 1000;
-      const elapsedText = ` (${elapsedSeconds.toFixed(1)}s)`;
+      const elapsedMs = t.elapsed !== undefined ? t.elapsed * 1000 : Date.now() - t.createdAt;
+      const elapsedText = ` ${formatElapsed(elapsedMs)}`;
       const elapsedSuffix = disp.timer
         ? ` ${colorText ? colorMessage(t.type, elapsedText.trim(), styler) : elapsedText.trim()}`
         : '';
