@@ -1,7 +1,7 @@
 import { notify } from '../src/index';
 import { sleep } from './helpers';
 
-const bar = notify.progress({ total: 15 }, {}, { display: { elapsed: true } });
+const bar = notify.progress({ total: 15 }, {}, { display: { timer: true } });
 for (let i = 0; i < 15; i++) {
   await sleep(100);
   bar.advance();
@@ -11,6 +11,7 @@ await sleep(500);
 const bar2 = notify.progress(
   { total: 3, variant: 'dot' },
   { loading: 'Processing…', success: 'All done!', error: 'Bailed' },
+  { display: { timer: true } },
 );
 bar2.advance();
 await sleep(300);

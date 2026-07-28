@@ -19,7 +19,7 @@ export type ProgressBarSet = {
 
 export type NotifyDisplay = {
   icon?: boolean;
-  elapsed?: boolean;
+  timer?: boolean;
   // progress-specific
   spinner?: boolean;
   brackets?: boolean;
@@ -134,6 +134,8 @@ export type NotifyEntry = {
   message: string;
   icon?: string;
   createdAt: number;
+  updatedAt?: number; // reset on update, used for duration/expiry check
+  elapsed?: number;
   duration: number;
   persistent: boolean;
   keepAlive: boolean;

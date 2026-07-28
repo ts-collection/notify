@@ -42,7 +42,7 @@ export class NotifyManager {
   private render() {
     const now = Date.now();
     this.entries = this.entries.filter(
-      (t) => t.persistent || now - t.createdAt < t.duration,
+      (t) => t.persistent || now - (t.updatedAt ?? t.createdAt) < t.duration,
     );
 
     if (this.entries.length === 0) {
@@ -68,8 +68,9 @@ export class NotifyManager {
       const progressSuffix = progressText
         ? ` ${colorText ? colorMessage(t.type, progressText, styler) : progressText}`
         : '';
-      const elapsedSuffix = disp.elapsed
-        ? ` (${((Date.now() - t.createdAt) / 1000).toFixed(1)}s)`
+      const elapsedSeconds = t.elapsed ?? (Date.now() - t.createdAt) / 1000;
+      const elapsedSuffix = disp.timer
+        ? ` (${elapsedSeconds.toFixed(1)}s)`
         : '';
       if (t.type === 'loading' || t.type === 'progress') t.spinnerIndex++;
       return `${iconPart}${message}${elapsedSuffix}${progressSuffix}`;
@@ -151,9 +152,7 @@ export class NotifyManager {
     perCallDisplay?: Partial<NotifyDisplay>,
   ): Partial<NotifyDisplay> | undefined {
     if (perCallDisplay) return perCallDisplay;
-    return (
-      this.defaults.variants?.[type]?.display ?? this.defaults.display
-    );
+    return this.defaults.variants?.[type]?.display ?? this.defaults.display;
   }
 
   // NOTE: resolve progress defaults — explicit build to satisfy exactOptionalPropertyTypes
@@ -227,7 +226,13 @@ export class NotifyManager {
       });
     }
 
+    // NOTE: every update restarts this entry's expiry window (used for
+    // toast dismissal timing). createdAt is left untouched so the
+    // elapsed-time display always reflects the true creation time.
+    entry.updatedAt = Date.now();
+
     if (update.type !== undefined) {
+      const wasActive = entry.type === 'loading' || entry.type === 'progress';
       entry.type = update.type;
       // NOTE: clear progress when switching away from progress type
       if (update.type !== 'progress') delete entry.progress;
@@ -236,11 +241,17 @@ export class NotifyManager {
         entry.duration = Number.POSITIVE_INFINITY;
         entry.persistent = true;
       } else {
-        const toastOption = update.options?.toast ?? {
-          duration: entry.duration,
-        };
+        // NOTE: don't fall back to entry.duration here — it's still
+        // Infinity from the loading/progress state, which would make
+        // this toast never expire. Fall back to a real toast default.
+        const toastOption = update.options?.toast ?? true;
         entry.duration = this.resolveToast(toastOption).duration;
         entry.persistent = false;
+        // NOTE: freeze elapsed time at the moment of completion so it
+        // stops climbing while the finished toast is still on screen.
+        if (wasActive) {
+          entry.elapsed = (Date.now() - entry.createdAt) / 1000;
+        }
       }
     }
 
@@ -258,8 +269,6 @@ export class NotifyManager {
           : {}),
       };
     }
-
-    entry.createdAt = Date.now();
 
     if (update.options?.keepAlive !== undefined) {
       entry.keepAlive = update.options.keepAlive;

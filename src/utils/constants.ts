@@ -18,7 +18,7 @@ export const DEFAULT_TOAST_DURATION = 3000;
 export const LIBRARY_DEFAULTS: NotifyDefaults = {
   display: {
     icon: true,
-    elapsed: false,
+    timer: false,
     spinner: true,
     brackets: false,
     percentage: true,
