@@ -12,11 +12,26 @@ export type NotifyType =
   | 'loading'
   | 'progress';
 
-export type ProgressVariant = 'bar' | 'block' | 'line' | 'dot' | 'none';
+export type ProgressVariant =
+  | 'bar'
+  | 'block'
+  | 'line'
+  | 'dot'
+  | 'smooth'
+  | 'shade'
+  | 'slim'
+  | 'pill'
+  | 'braille'
+  | 'circle'
+  | 'diamond'
+  | 'pacman'
+  | 'none';
 
 export type ProgressBarSet = {
   full: string;
   empty: string;
+  head?: string;
+  headAlt?: string;
 };
 
 export type ProgressVariantLike = ProgressVariant | ProgressBarSet;

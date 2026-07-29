@@ -149,9 +149,30 @@ export function colorMessage(
   }
 }
 
+function renderBar(
+  set: ProgressBarSet,
+  percent: number,
+  width: number,
+  tick: number,
+): string {
+  if (percent >= 100) return set.full.repeat(width);
+
+  if (!set.head) {
+    const filled = Math.round((percent / 100) * width);
+    return set.full.repeat(filled) + set.empty.repeat(width - filled);
+  }
+
+  const frac = percent / 100;
+  const pos = Math.min(Math.floor(frac * width), width - 1);
+  const head =
+    Math.floor(tick / 6) % 2 === 0 ? set.head : (set.headAlt ?? set.head);
+  return set.full.repeat(pos) + head + set.empty.repeat(width - pos - 1);
+}
+
 export function formatProgress(
   progress: ProgressInitOptions,
   disp?: Partial<NotifyDisplay>,
+  tick: number = 0,
 ): string {
   const { current, total, variant } = progress;
   const { brackets = false, percentage = true, count = true } = disp ?? {};
@@ -164,7 +185,6 @@ export function formatProgress(
       Math.max(0, Math.round((current / total) * 100)),
     );
     const barWidth = 20;
-    const filled = Math.round((percent / 100) * barWidth);
 
     let set: ProgressBarSet | undefined;
     if (variant && typeof variant === 'object') {
@@ -177,7 +197,7 @@ export function formatProgress(
     }
 
     if (set) {
-      const bar = set.full.repeat(filled) + set.empty.repeat(barWidth - filled);
+      const bar = renderBar(set, percent, barWidth, tick);
       if (brackets) {
         parts.push(`[${bar}]`);
       } else {

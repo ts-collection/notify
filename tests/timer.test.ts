@@ -98,14 +98,19 @@ describe('timer', () => {
     });
 
     it('shows loading when messages.loading is provided (sync)', () => {
-      timer.measure(() => {
-        vi.advanceTimersByTime(2000);
-        return 1;
-      }, { loading: 'Working...' });
+      timer.measure(
+        () => {
+          vi.advanceTimersByTime(2000);
+          return 1;
+        },
+        { loading: 'Working...' },
+      );
 
       // loading appeared
       const calls = mockLogUpdate.mock.calls;
-      const loadingLine = stripAnsi(calls.find((c: string[]) => c[0].includes('Working...'))?.[0] ?? '');
+      const loadingLine = stripAnsi(
+        calls.find((c: string[]) => c[0].includes('Working...'))?.[0] ?? '',
+      );
       expect(loadingLine).toContain('Working...');
 
       // then success with auto message
@@ -114,12 +119,15 @@ describe('timer', () => {
     });
 
     it('measure with custom success message (sync)', () => {
-      const result = timer.measure(() => {
-        vi.advanceTimersByTime(500);
-        return 'data';
-      }, {
-        success: (elapsed) => `took ${elapsed.toFixed(2)}s`,
-      });
+      const result = timer.measure(
+        () => {
+          vi.advanceTimersByTime(500);
+          return 'data';
+        },
+        {
+          success: (elapsed) => `took ${elapsed.toFixed(2)}s`,
+        },
+      );
 
       expect(result).toBe('data');
       const lastCall = stripAnsi(mockLogUpdate.mock.calls.at(-1)?.[0] ?? '');
@@ -128,12 +136,15 @@ describe('timer', () => {
 
     it('measure with custom error message (sync throw)', () => {
       expect(() =>
-        timer.measure(() => {
-          vi.advanceTimersByTime(100);
-          throw new Error('boom');
-        }, {
-          error: (err) => `fail: ${(err as Error).message}`,
-        }),
+        timer.measure(
+          () => {
+            vi.advanceTimersByTime(100);
+            throw new Error('boom');
+          },
+          {
+            error: (err) => `fail: ${(err as Error).message}`,
+          },
+        ),
       ).toThrow('boom');
 
       const lastCall = stripAnsi(mockLogUpdate.mock.calls.at(-1)?.[0] ?? '');

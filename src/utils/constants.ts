@@ -21,6 +21,14 @@ export const PROGRESS_BARS: Record<
   block: { full: '█', empty: ' ' },
   line: { full: '━', empty: '─' },
   dot: { full: '●', empty: '○' },
+  smooth: { full: '█', empty: ' ' },
+  shade: { full: '▓', empty: '░', head: '▒' },
+  slim: { full: '━', empty: '╌', head: '❯' },
+  pill: { full: '▰', empty: '▱' },
+  braille: { full: '⣿', empty: '⣀', head: '⣷' },
+  circle: { full: '⬤', empty: '◯', head: '◉', headAlt: '⬤' },
+  diamond: { full: '◆', empty: '◇', head: '◈' },
+  pacman: { full: '─', empty: '·', head: 'ᗧ', headAlt: 'ᗣ' },
 };
 
 export const DEFAULT_TOAST_DURATION = 3000;

@@ -65,17 +65,20 @@ export class NotifyManager {
       const message = colorText
         ? colorMessage(t.type, t.message, styler)
         : t.message;
-      const progressText = t.progress ? formatProgress(t.progress, disp) : '';
+      const progressText = t.progress
+        ? formatProgress(t.progress, disp, t.spinnerIndex)
+        : '';
       const progressSuffix = progressText
         ? ` ${colorText ? colorMessage(t.type, progressText, styler) : progressText}`
         : '';
-      const elapsedMs = t.elapsed !== undefined ? t.elapsed * 1000 : Date.now() - t.createdAt;
+      const elapsedMs =
+        t.elapsed !== undefined ? t.elapsed * 1000 : Date.now() - t.createdAt;
       const elapsedText = ` ${formatElapsed(elapsedMs)}`;
       const elapsedSuffix = disp.timer
         ? ` ${colorText ? colorMessage(t.type, elapsedText.trim(), styler) : elapsedText.trim()}`
         : '';
       if (t.type === 'loading' || t.type === 'progress') t.spinnerIndex++;
-      return `${iconPart}${message}${elapsedSuffix}${progressSuffix}`;
+      return `${iconPart}${message}${progressSuffix}${elapsedSuffix}`;
     });
 
     this.renderLoop.write(lines);

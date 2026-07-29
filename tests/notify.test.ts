@@ -757,11 +757,9 @@ describe('notify.progress', () => {
   });
 
   it('renders progress bar with percentage and brackets', () => {
-    const bar = notify.progress(
-      { total: 500 },
-      undefined,
-      { display: { percentage: true, brackets: true, count: true } },
-    );
+    const bar = notify.progress({ total: 500 }, undefined, {
+      display: { percentage: true, brackets: true, count: true },
+    });
     bar.set(200);
     tick();
     const text = lastRender();
@@ -782,11 +780,9 @@ describe('notify.progress', () => {
   });
 
   it('clamps percentage between 0 and 100', () => {
-    const bar = notify.progress(
-      { total: 100 },
-      undefined,
-      { display: { percentage: true } },
-    );
+    const bar = notify.progress({ total: 100 }, undefined, {
+      display: { percentage: true },
+    });
     bar.update({
       type: 'progress',
       progress: { current: 999, total: 100 },
@@ -796,7 +792,9 @@ describe('notify.progress', () => {
   });
 
   it('starts at 0 percent when no advance', () => {
-    notify.progress({ total: 100 }, undefined, { display: { percentage: true } });
+    notify.progress({ total: 100 }, undefined, {
+      display: { percentage: true },
+    });
     tick();
     expect(lastRender()).toMatch(/0%/);
   });
@@ -834,11 +832,9 @@ describe('notify.progress', () => {
   });
 
   it('updates with partial progress via handle.update', () => {
-    const handle = notify.progress(
-      { total: 100 },
-      undefined,
-      { display: { percentage: true } },
-    );
+    const handle = notify.progress({ total: 100 }, undefined, {
+      display: { percentage: true },
+    });
     tick();
     expect(lastRender()).toMatch(/0%/);
 
@@ -865,11 +861,9 @@ describe('notify.progress', () => {
   });
 
   it('updates with progress AND type+message in same call', () => {
-    const handle = notify.progress(
-      { total: 5 },
-      undefined,
-      { display: { percentage: true } },
-    );
+    const handle = notify.progress({ total: 5 }, undefined, {
+      display: { percentage: true },
+    });
     handle.update({
       type: 'progress',
       message: 'Still processing…',
@@ -901,11 +895,9 @@ describe('notify.progress', () => {
   });
 
   it('renders block variant with spaces as empty', () => {
-    const bar = notify.progress(
-      { total: 10, variant: 'block' },
-      undefined,
-      { display: { percentage: true, brackets: true } },
-    );
+    const bar = notify.progress({ total: 10, variant: 'block' }, undefined, {
+      display: { percentage: true, brackets: true },
+    });
     bar.set(8);
     tick();
     expect(lastRender()).toMatch(/80%/);
@@ -913,11 +905,9 @@ describe('notify.progress', () => {
   });
 
   it('renders line variant', () => {
-    const bar = notify.progress(
-      { total: 5, variant: 'line' },
-      undefined,
-      { display: { percentage: true } },
-    );
+    const bar = notify.progress({ total: 5, variant: 'line' }, undefined, {
+      display: { percentage: true },
+    });
     bar.set(4);
     tick();
     expect(lastRender()).toMatch(/80%/);
@@ -925,11 +915,9 @@ describe('notify.progress', () => {
   });
 
   it('renders dot variant', () => {
-    const bar = notify.progress(
-      { total: 5, variant: 'dot' },
-      undefined,
-      { display: { percentage: true } },
-    );
+    const bar = notify.progress({ total: 5, variant: 'dot' }, undefined, {
+      display: { percentage: true },
+    });
     bar.set(3);
     tick();
     expect(lastRender()).toMatch(/60%/);
@@ -938,11 +926,9 @@ describe('notify.progress', () => {
   });
 
   it('renders none variant (no bar, just percentage)', () => {
-    const bar = notify.progress(
-      { total: 100, variant: 'none' },
-      undefined,
-      { display: { percentage: true } },
-    );
+    const bar = notify.progress({ total: 100, variant: 'none' }, undefined, {
+      display: { percentage: true },
+    });
     bar.set(50);
     tick();
     expect(lastRender()).toMatch(/50%/);

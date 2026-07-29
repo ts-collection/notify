@@ -168,31 +168,41 @@ notify.progress({
 
 ### Bar Variants
 
-| Variant | Full | Empty | Sample |
-|---------|------|-------|--------|
-| `bar` (default) | `█` | `░` | `[████████████████████░░░░░░░░░░] 67%` |
-| `block` | `█` | ` ` | `[████████████████████          ] 80%` |
-| `line` | `━` | `─` | `[━━━━━━━━━━━━━━━━━━━━━━━━━] 80%` |
-| `dot` | `●` | `○` | `[●●●●●●●●●●●●●●●●●●○○○○○○○○] 80%` |
-| `none` | — | — | `80% (400/500)` |
+| Variant | Progress |
+|---------|----------|
+| `bar` (default) | `██████████░░░░░░░░░░` `50%` |
+| `block` | `██████████          ` `50%` |
+| `smooth` | `█████     ` `50%` |
+| `shade` | `▓▓▓▓▓▒░░░░` `50%` |
+| `slim` | `━━━━━❯╌╌╌╌` `50%` |
+| `pill` | `▰▰▰▰▰▱▱▱▱▱` `50%` |
+| `braille` | `⣿⣿⣿⣿⣷⣀⣀⣀⣀⣀` `50%` |
+| `line` | `━━━━━━━━━━━━━━━━━━━━` `100%` |
+| `dot` | `●●●●●○○○○○` `50%` |
+| `circle` | `⬤⬤⬤⬤⬤◉◯◯◯◯` `50%` |
+| `diamond` | `◆◆◆◆◆◆◆◆◆◇` `90%` |
+| `pacman` | `──────────ᗧ·········` `50%` |
+| `none` | `80% (400/500)` |
 
 ```ts
-notify.progress({ total: 5, variant: 'dot' }, { loading: 'Tasks' });
+notify.progress({ total: 5, variant: 'pacman' }, { loading: 'Chomping' });
 ```
+
+> `circle` and `pacman` animate — the head character alternates every ~0.5s.
 
 ### Custom Variant
 
-Pass an inline `ProgressBarSet` with any `full`/`empty` characters:
+Pass an inline `ProgressBarSet` with optional `head`/`headAlt` for an animated pointer:
 
 ```ts
 // Custom characters
 notify.progress({ total: 10, variant: { full: 'x', empty: 'o' } });
 
-// Emoji bar
-notify.progress({ total: 5, variant: { full: '✅', empty: '⬜' } });
-
-// Single-char symbols
-notify.progress({ total: 8, variant: { full: '▓', empty: '░' } });
+// Animated head edge
+notify.progress({
+  total: 8,
+  variant: { full: '─', empty: ' ', head: '◐', headAlt: '◑' },
+});
 ```
 
 Variant is set-once — `notify.update` cannot change it.
@@ -434,6 +444,16 @@ import type {
   TimerUnit,
 } from '@ts-utilities/notify';
 ```
+
+`ProgressBarSet`:
+
+```ts
+{
+  full: string;
+  empty: string;
+  head?: string;
+  headAlt?: string;
+}
 
 ## API
 
