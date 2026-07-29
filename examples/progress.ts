@@ -27,3 +27,20 @@ bar3.set(5);
 await sleep(400);
 bar3.fail('Failed at step 2');
 await sleep(500);
+
+// Custom inline variant — pass full/empty characters directly
+const bar4 = notify.progress(
+  { total: 5, variant: { full: 'x', empty: ' ' } },
+  { loading: 'Custom chars' },
+);
+await sleep(200);
+bar4.advance();
+await sleep(200);
+bar4.advance();
+await sleep(200);
+bar4.advance();
+await sleep(200);
+bar4.advance();
+await sleep(200);
+bar4.advance();
+await sleep(500);

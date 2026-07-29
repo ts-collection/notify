@@ -19,6 +19,8 @@ export type ProgressBarSet = {
   empty: string;
 };
 
+export type ProgressVariantLike = ProgressVariant | ProgressBarSet;
+
 export type NotifyDisplay = {
   icon?: boolean;
   timer?: boolean;
@@ -32,7 +34,7 @@ export type NotifyDisplay = {
 export type ProgressInitOptions = {
   current: number;
   total?: number;
-  variant?: ProgressVariant;
+  variant?: ProgressVariantLike;
 };
 
 export type ProgressOptions = Pick<ProgressInitOptions, 'current' | 'total'>;
@@ -105,7 +107,7 @@ export type ProgressMessages = {
 
 export type ProgressConfig = {
   total?: number;
-  variant?: ProgressVariant;
+  variant?: ProgressVariantLike;
 };
 
 export type NotifyVariantConfig = {

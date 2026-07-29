@@ -948,4 +948,60 @@ describe('notify.progress', () => {
     expect(lastRender()).toMatch(/50%/);
     expect(lastRender()).not.toMatch(/\[/);
   });
+
+  it('custom variant via ProgressBarSet renders custom characters', () => {
+    const bar = notify.progress(
+      { total: 10, variant: { full: '@', empty: '.' } },
+      undefined,
+      { display: { percentage: true, brackets: true } },
+    );
+    bar.set(5);
+    tick();
+    const text = lastRender();
+    expect(text).toMatch(/50%/);
+    expect(text).toMatch(/@/);
+    expect(text).toMatch(/\./);
+  });
+
+  it('custom variant persists across advance/set calls', () => {
+    const bar = notify.progress(
+      { total: 10, variant: { full: 'x', empty: 'o' } },
+      undefined,
+      { display: { percentage: true } },
+    );
+    tick();
+    expect(lastRender()).toMatch(/o/);
+
+    bar.set(8);
+    tick();
+    expect(lastRender()).toMatch(/80%/);
+    expect(lastRender()).toMatch(/x/);
+    expect(lastRender()).toMatch(/o/);
+  });
+
+  it('custom variant via handle.update preserves variant characters', () => {
+    const bar = notify.progress(
+      { total: 10, variant: { full: '#', empty: '-' } },
+      undefined,
+      { display: { percentage: true } },
+    );
+    tick();
+
+    bar.set(6);
+    tick();
+    expect(lastRender()).toMatch(/60%/);
+    expect(lastRender()).toMatch(/#/);
+    expect(lastRender()).toMatch(/-/);
+
+    bar.update({
+      type: 'progress',
+      message: 'Still going…',
+      progress: { current: 8, total: 10 },
+    });
+    tick();
+    expect(lastRender()).toMatch(/Still going/);
+    expect(lastRender()).toMatch(/80%/);
+    expect(lastRender()).toMatch(/#/);
+    expect(lastRender()).toMatch(/-/);
+  });
 });

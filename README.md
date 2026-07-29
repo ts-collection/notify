@@ -180,6 +180,21 @@ notify.progress({
 notify.progress({ total: 5, variant: 'dot' }, { loading: 'Tasks' });
 ```
 
+### Custom Variant
+
+Pass an inline `ProgressBarSet` with any `full`/`empty` characters:
+
+```ts
+// Custom characters
+notify.progress({ total: 10, variant: { full: 'x', empty: 'o' } });
+
+// Emoji bar
+notify.progress({ total: 5, variant: { full: '✅', empty: '⬜' } });
+
+// Single-char symbols
+notify.progress({ total: 8, variant: { full: '▓', empty: '░' } });
+```
+
 Variant is set-once — `notify.update` cannot change it.
 
 ### Unknown Total
@@ -411,6 +426,8 @@ import type {
   ProgressOptions,
   ProgressHandle,
   ProgressVariant,
+  ProgressVariantLike,
+  ProgressBarSet,
   ProgressConfig,
   PromiseMessages,
   PromiseHandle,

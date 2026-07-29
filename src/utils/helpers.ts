@@ -7,6 +7,7 @@ import type {
   NotifyOptions,
   NotifyStyleOptions,
   NotifyType,
+  ProgressBarSet,
   ProgressInitOptions,
 } from '../types';
 
@@ -158,7 +159,6 @@ export function formatProgress(
   const parts: string[] = [];
 
   if (total !== undefined) {
-    const v = variant ?? 'bar';
     const percent = Math.min(
       100,
       Math.max(0, Math.round((current / total) * 100)),
@@ -166,8 +166,17 @@ export function formatProgress(
     const barWidth = 20;
     const filled = Math.round((percent / 100) * barWidth);
 
-    if (v !== 'none') {
-      const set = PROGRESS_BARS[v];
+    let set: ProgressBarSet | undefined;
+    if (variant && typeof variant === 'object') {
+      set = variant;
+    } else if (variant && variant !== 'none') {
+      set = PROGRESS_BARS[variant as keyof typeof PROGRESS_BARS];
+    } else if (!variant) {
+      // NOTE: default to 'bar' when no variant is specified
+      set = PROGRESS_BARS.bar;
+    }
+
+    if (set) {
       const bar = set.full.repeat(filled) + set.empty.repeat(barWidth - filled);
       if (brackets) {
         parts.push(`[${bar}]`);
