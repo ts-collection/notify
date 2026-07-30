@@ -1,4 +1,5 @@
 import type {
+  Message,
   NotifyDefaults,
   NotifyDisplay,
   NotifyEntry,
@@ -18,6 +19,7 @@ import {
   formatProgress,
   getColoredIcon,
   getIconChar,
+  renderSegments,
   resolveStyle,
 } from './helpers';
 import { RenderLoop } from './renderer';
@@ -174,9 +176,10 @@ export class NotifyManager {
 
   add(
     type: NotifyType,
-    message: string,
+    message: Message,
     options: NotifyOptions & { progress?: ProgressInitOptions } = {},
   ): string {
+    const resolved = Array.isArray(message) ? renderSegments(message) : message;
     const id = options.id ?? this.nextId();
     const existing = this.entries.find((t) => t.id === id);
 
@@ -194,7 +197,7 @@ export class NotifyManager {
     const entry: NotifyEntry = {
       id,
       type,
-      message,
+      message: resolved,
       ...(icon !== undefined ? { icon } : {}),
       createdAt: Date.now(),
       duration,
@@ -261,7 +264,9 @@ export class NotifyManager {
     }
 
     if (update.message !== undefined) {
-      entry.message = update.message;
+      entry.message = Array.isArray(update.message)
+        ? renderSegments(update.message)
+        : update.message;
     }
 
     if (update.progress !== undefined) {
@@ -319,7 +324,10 @@ export class NotifyManager {
   progressHandle(
     id: string,
     config: ProgressConfig,
-    messages?: { success?: string; error?: string },
+    messages?: {
+      success?: Message;
+      error?: Message;
+    },
     options?: NotifyOptions,
   ): ProgressHandle {
     let resolved = false;

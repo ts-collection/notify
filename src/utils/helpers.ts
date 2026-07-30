@@ -1,6 +1,7 @@
 import type { ChalkInstance } from 'chalk';
 import chalk, { modifierNames } from 'chalk';
 import type {
+  InlineSegment,
   NotifyColor,
   NotifyDisplay,
   NotifyEntry,
@@ -125,12 +126,25 @@ function hasBoolModifier(obj: Partial<Record<string, boolean>>): boolean {
   return modifierNames.some((k) => obj[k] === true);
 }
 
+export function renderSegments(segments: InlineSegment[]): string {
+  return segments
+    .map((s) => {
+      if (typeof s === 'string') return s;
+      if (!s.style) return s.text;
+      const styler = resolveStyle(s.style);
+      return styler ? styler(s.text) : s.text;
+    })
+    .join('');
+}
+
 // NOTE: wrap text in type-appropriate or custom color
+// NOTE: skip outer coloring when message already has inline ANSI styles
 export function colorMessage(
   type: NotifyType,
   msg: string,
   styler?: (text: string) => string,
 ): string {
+  if (msg.startsWith('\x1b[')) return msg;
   if (styler) return styler(msg);
   switch (type) {
     case 'success':

@@ -5,5 +5,6 @@ import './progress';
 import './promise';
 import './toast-promise';
 import './style';
+import './inline-styles';
 import './timer';
 import './dismiss';

@@ -1,4 +1,5 @@
 import type {
+  Message,
   NotifyDefaults,
   NotifyHandle,
   NotifyOptions,
@@ -20,24 +21,24 @@ function toHandle(id: string): NotifyHandle {
   return manager.handle(id);
 }
 
-function base(message: string, options?: NotifyOptions): NotifyHandle {
+function base(message: Message, options?: NotifyOptions): NotifyHandle {
   return toHandle(manager.add('default', message, options));
 }
 
-base.success = (message: string, options?: NotifyOptions): NotifyHandle =>
+base.success = (message: Message, options?: NotifyOptions): NotifyHandle =>
   toHandle(manager.add('success', message, options));
-base.error = (message: string, options?: NotifyOptions): NotifyHandle =>
+base.error = (message: Message, options?: NotifyOptions): NotifyHandle =>
   toHandle(manager.add('error', message, options));
-base.warning = (message: string, options?: NotifyOptions): NotifyHandle =>
+base.warning = (message: Message, options?: NotifyOptions): NotifyHandle =>
   toHandle(manager.add('warning', message, options));
-base.info = (message: string, options?: NotifyOptions): NotifyHandle =>
+base.info = (message: Message, options?: NotifyOptions): NotifyHandle =>
   toHandle(manager.add('info', message, options));
-base.loading = (message: string, options?: NotifyOptions): NotifyHandle =>
+base.loading = (message: Message, options?: NotifyOptions): NotifyHandle =>
   toHandle(manager.add('loading', message, options));
 
 base.progress = (
   config: ProgressConfig,
-  messages?: ProgressMessages & { loading?: string },
+  messages?: ProgressMessages & { loading?: Message },
   options?: NotifyOptions,
 ): ProgressHandle => {
   const loadingMsg = messages?.loading ?? 'Working...';

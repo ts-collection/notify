@@ -36,6 +36,55 @@ notify.dismiss(id);            // remove one
 notify.clear();                // remove all
 ```
 
+## Inline Styles
+
+Style specific parts of a message without affecting the whole notification.
+
+```ts
+import { notify } from '@ts-utilities/notify';
+
+notify([
+  'Build ',
+  { text: 'succeeded', style: { color: 'green', bold: true } },
+  ' in 2.4s',
+]);
+
+notify.error([
+  { text: '✗ ', style: { color: 'red' } },
+  'Connection refused on ',
+  { text: 'localhost:3000', style: { color: 'cyan', underline: true } },
+]);
+```
+
+Works everywhere — `notify()`, `update()`, `promise()`, `progress()`:
+
+```ts
+// With type helpers
+notify.success([
+  { text: '✓ ', style: { color: 'green' } },
+  'Done in ',
+  { text: '2.4s', style: { color: 'cyan' } },
+]);
+
+// With update
+const h = notify.loading('Working…');
+h.update({ message: [{ text: '✓', style: { color: 'green' } }, ' Done'] });
+
+// With promise
+await notify.promise(fetch('/api'), {
+  loading: ['Fetching ', { text: '/api', style: { color: 'cyan' } }, '…'],
+  success: (data) => [`Got `, { text: `${data.status}`, style: { color: 'green' } }],
+  error: [`Request `, { text: 'failed', style: { color: 'red' } }],
+});
+```
+
+Plain strings still work — no migration needed.
+
+```ts
+notify('Hello');
+notify.success('Done');
+```
+
 ## Icons
 
 Override the default type-based icon with any character or emoji.
@@ -426,6 +475,8 @@ If `loading` is omitted, the function runs without a loading notification — on
 
 ```ts
 import type {
+  Message,
+  InlineSegment,
   NotifyEntry,
   NotifyOptions,
   NotifyStyleOptions,
@@ -445,6 +496,14 @@ import type {
 } from '@ts-utilities/notify';
 ```
 
+`Message`:
+
+```ts
+type Message = string | InlineSegment[];
+
+type InlineSegment = string | { text: string; style?: NotifyStyleOptions };
+```
+
 `ProgressBarSet`:
 
 ```ts
@@ -454,6 +513,7 @@ import type {
   head?: string;
   headAlt?: string;
 }
+```
 
 ## API
 

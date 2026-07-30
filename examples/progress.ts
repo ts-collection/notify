@@ -1,46 +1,40 @@
 import { notify } from '../src/index';
 import { sleep } from './helpers';
 
-const bar = notify.progress({ total: 15, variant: 'bar' });
-for (let i = 0; i < 15; i++) {
-  await sleep(100);
-  bar.advance();
+const variants = [
+  'bar',
+  'pacman',
+  'circle',
+  'shade',
+  'slim',
+  'braille',
+  'diamond',
+  'pill',
+  'smooth',
+  'dot',
+  'line',
+  'block',
+] as const;
+
+for (const v of variants) {
+  const bar = notify.progress(
+    { total: 8, variant: v },
+    { loading: v },
+  );
+  for (let i = 0; i < 8; i++) {
+    await sleep(100);
+    bar.advance();
+  }
+  await sleep(200);
 }
-await sleep(500);
 
-const bar2 = notify.progress(
-  { total: 3, variant: 'dot' },
-  { loading: 'Processing…', success: 'All done!', error: 'Bailed' },
-  { display: { timer: true } },
+// Custom inline variant — pass full/empty/head directly
+const custom = notify.progress(
+  { total: 6, variant: { full: '▓', empty: '░', head: '▒' } },
+  { loading: 'custom' },
 );
-bar2.advance();
-await sleep(300);
-bar2.advance();
-await sleep(300);
-bar2.advance();
-await sleep(500);
-
-const bar3 = notify.progress({ total: 10, variant: 'line' });
-bar3.label('Step 1…');
-await sleep(400);
-bar3.set(5);
-await sleep(400);
-bar3.fail('Failed at step 2');
-await sleep(500);
-
-// Custom inline variant — pass full/empty characters directly
-const bar4 = notify.progress(
-  { total: 5, variant: { full: 'x', empty: ' ' } },
-  { loading: 'Custom chars' },
-);
-await sleep(200);
-bar4.advance();
-await sleep(200);
-bar4.advance();
-await sleep(200);
-bar4.advance();
-await sleep(200);
-bar4.advance();
-await sleep(200);
-bar4.advance();
+for (let i = 0; i < 6; i++) {
+  await sleep(120);
+  custom.advance();
+}
 await sleep(500);

@@ -66,6 +66,12 @@ export type NotifyStyleOptions = {
   modifier?: ChalkInstance | ChalkInstance[];
 } & Partial<Record<ModifierName, boolean>>;
 
+export type InlineSegment =
+  | string
+  | { text: string; style?: NotifyStyleOptions };
+
+export type Message = string | InlineSegment[];
+
 // NOTE: developer options
 export type NotifyOptions = {
   id?: string;
@@ -78,9 +84,9 @@ export type NotifyOptions = {
 
 // NOTE: internal options
 export type PromiseMessages<T = unknown> = {
-  loading?: string;
-  success?: string | ((data: T) => string);
-  error?: string | ((error: unknown) => string);
+  loading?: Message;
+  success?: Message | ((data: T) => Message);
+  error?: Message | ((error: unknown) => Message);
   finally?: () => void | Promise<void>;
 };
 
@@ -93,7 +99,7 @@ export type NotifyHandle = {
 
 export type NotifyUpdate = {
   type?: NotifyType;
-  message?: string;
+  message?: Message;
   progress?: ProgressOptions;
   options?: NotifyOptions;
 };
@@ -116,8 +122,8 @@ export type PromiseHandle<T> = NotifyHandle & {
 } & PromiseLike<T>;
 
 export type ProgressMessages = {
-  success?: string;
-  error?: string;
+  success?: Message;
+  error?: Message;
 };
 
 export type ProgressConfig = {
