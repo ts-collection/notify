@@ -17,10 +17,7 @@ const variants = [
 ] as const;
 
 for (const v of variants) {
-  const bar = notify.progress(
-    { total: 8, variant: v },
-    { loading: v },
-  );
+  const bar = notify.progress({ total: 8, variant: v }, { loading: v });
   for (let i = 0; i < 8; i++) {
     await sleep(100);
     bar.advance();

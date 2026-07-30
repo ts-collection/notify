@@ -107,9 +107,9 @@ export type NotifyUpdate = {
 export type ProgressHandle = NotifyHandle & {
   advance: (n?: number) => void;
   set: (current: number) => void;
-  done: (msg?: string) => void;
-  fail: (msg?: string) => void;
-  label: (msg: string) => void;
+  done: (msg?: Message) => void;
+  fail: (msg?: Message) => void;
+  label: (msg: Message) => void;
 };
 
 export type ResolvedHandle<T> = NotifyHandle & {

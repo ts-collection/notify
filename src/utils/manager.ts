@@ -333,7 +333,7 @@ export class NotifyManager {
     let resolved = false;
     const hasTotal = config.total !== undefined;
 
-    const resolve = (type: 'success' | 'error', msg?: string) => {
+    const resolve = (type: 'success' | 'error', msg?: Message) => {
       const finalMsg =
         msg ?? (type === 'success' ? messages?.success : messages?.error);
       const update: NotifyUpdate = { type };
@@ -373,15 +373,15 @@ export class NotifyManager {
         }
         checkResolve(current);
       },
-      done: (msg?: string) => {
+      done: (msg?: Message) => {
         resolved = true;
         resolve('success', msg);
       },
-      fail: (msg?: string) => {
+      fail: (msg?: Message) => {
         resolved = true;
         resolve('error', msg);
       },
-      label: (msg: string) => {
+      label: (msg: Message) => {
         this.update(id, { message: msg });
       },
     };

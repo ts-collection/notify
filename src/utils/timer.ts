@@ -1,4 +1,4 @@
-import type { NotifyHandle, TimerUnit } from '../types';
+import type { Message, NotifyHandle, TimerUnit } from '../types';
 import { formatElapsed } from './helpers';
 import { notify } from './notify';
 
@@ -6,9 +6,9 @@ const store = new Map<string, number>();
 let counter = 0;
 
 export type MeasureMessages = {
-  loading?: string;
-  success?: string | ((elapsed: number) => string);
-  error?: string | ((error: unknown) => string);
+  loading?: Message;
+  success?: Message | ((elapsed: number) => Message);
+  error?: Message | ((error: unknown) => Message);
 };
 
 function factor(unit: Exclude<TimerUnit, 'auto'>): number {
@@ -48,8 +48,8 @@ function getFnLabel(fn: Function): string {
 function resolveSuccessMsg(
   label: string,
   elapsedMs: number,
-  msg?: string | ((elapsed: number) => string),
-): string {
+  msg?: Message | ((elapsed: number) => Message),
+): Message {
   return msg === undefined
     ? `${label}Completed in ${formatElapsed(elapsedMs)}`
     : typeof msg === 'function'
@@ -61,8 +61,8 @@ function resolveErrorMsg(
   label: string,
   elapsedMs: number,
   err: unknown,
-  msg?: string | ((error: unknown) => string),
-): string {
+  msg?: Message | ((error: unknown) => Message),
+): Message {
   return msg === undefined
     ? `${label}Failed in ${formatElapsed(elapsedMs)}`
     : typeof msg === 'function'

@@ -1,4 +1,5 @@
 import type {
+  Message,
   NotifyHandle,
   NotifyOptions,
   ProgressConfig,
@@ -16,24 +17,24 @@ function toToastOptions(opts?: ToastOptions): NotifyOptions {
   return { ...rest, toast: duration ? { duration } : true };
 }
 
-function toast(msg: string, opts?: ToastOptions): NotifyHandle {
+function toast(msg: Message, opts?: ToastOptions): NotifyHandle {
   return notify(msg, toToastOptions(opts));
 }
 
-toast.success = (msg: string, opts?: ToastOptions): NotifyHandle =>
+toast.success = (msg: Message, opts?: ToastOptions): NotifyHandle =>
   notify.success(msg, toToastOptions(opts));
-toast.error = (msg: string, opts?: ToastOptions): NotifyHandle =>
+toast.error = (msg: Message, opts?: ToastOptions): NotifyHandle =>
   notify.error(msg, toToastOptions(opts));
-toast.warning = (msg: string, opts?: ToastOptions): NotifyHandle =>
+toast.warning = (msg: Message, opts?: ToastOptions): NotifyHandle =>
   notify.warning(msg, toToastOptions(opts));
-toast.info = (msg: string, opts?: ToastOptions): NotifyHandle =>
+toast.info = (msg: Message, opts?: ToastOptions): NotifyHandle =>
   notify.info(msg, toToastOptions(opts));
-toast.loading = (msg: string, opts?: ToastOptions): NotifyHandle =>
+toast.loading = (msg: Message, opts?: ToastOptions): NotifyHandle =>
   notify.loading(msg, toToastOptions(opts));
 
 toast.progress = (
   config: ProgressConfig,
-  messages?: ProgressMessages & { loading?: string },
+  messages?: ProgressMessages & { loading?: Message },
   opts?: ToastOptions,
 ): ProgressHandle => notify.progress(config, messages, toToastOptions(opts));
 
